@@ -79,6 +79,7 @@
     <Compile Include="Unit\StandardFudgeMessages.cs" />
     <Compile Include="Unit\Types\ByteArrayFieldTypeTest.cs" />
     <Compile Include="Unit\Types\FudgeArrayFieldTypeBaseTest.cs" />
+    <Compile Include="Unit\Types\FudgeDateTimeTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fudge\Fudge.csproj">

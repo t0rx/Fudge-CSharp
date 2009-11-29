@@ -78,6 +78,7 @@
     <Compile Include="NamespaceDoc.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Types\FudgeArrayFieldTypeBase.cs" />
+    <Compile Include="Types\FudgeDateTime.cs" />
     <Compile Include="Types\SecondaryFieldType.cs" />
     <Compile Include="Taxon\IFudgeTaxonomy.cs" />
     <Compile Include="Taxon\IFudgeTaxonomyResolver.cs" />
