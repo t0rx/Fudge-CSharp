@@ -65,6 +65,15 @@ namespace Fudge
             AddType(ByteArrayFieldType.VariableSizedInstance);
             AddType(StringFieldType.Instance);
             AddType(FudgeMsgFieldType.Instance);
+            AddType(FudgeDateTimeType.Instance);
+
+            AddStandardSecondaryTypes();
+        }
+
+        private void AddStandardSecondaryTypes()
+        {
+            AddType(new SecondaryFieldType<DateTime, FudgeDateTime>(FudgeDateTimeType.Instance, fdt => fdt.ToDateTime(DateTimeKind.Unspecified), dt => new FudgeDateTime(dt)));
+            AddType(new SecondaryFieldType<Guid, byte[]>(ByteArrayFieldType.Length16Instance, raw => new Guid(raw), value => value.ToByteArray()));
         }
 
         public void AddType(FudgeFieldType type, params Type[] alternativeTypes)
@@ -76,7 +85,7 @@ namespace Fudge
 
             rwLock.AcquireWriterLock(Timeout.Infinite);
             try
-            {                
+            {
                 if (!(type is ISecondaryFieldType))       // TODO t0rx 2009-09-12 -- Don't like this as a way of testing
                 {
                     int newLength = Math.Max(type.TypeId + 1, typesById.Length);
@@ -104,12 +113,12 @@ namespace Fudge
             {
                 return null;
             }
-            
+
             rwLock.AcquireReaderLock(Timeout.Infinite);
 
             FudgeFieldType result = null;
             typesByCSharpType.TryGetValue(csharpType, out result);
-            
+
             rwLock.ReleaseReaderLock();
             return result;
         }
@@ -132,7 +141,7 @@ namespace Fudge
         {
             if ((unknownTypesById.Length <= typeId) || (unknownTypesById[typeId] == null))
             {
-                int newLength = Math.Max(typeId + 1, unknownTypesById.Length); 
+                int newLength = Math.Max(typeId + 1, unknownTypesById.Length);
                 lock (unknownTypesById)
                 {
                     if ((unknownTypesById.Length < newLength) || (unknownTypesById[typeId] == null))
@@ -179,5 +188,6 @@ namespace Fudge
         public const byte BYTE_ARR_128_TYPE_ID = 23;
         public const byte BYTE_ARR_256_TYPE_ID = 24;
         public const byte BYTE_ARR_512_TYPE_ID = 25;
+        public const byte DATETIME_TYPE_ID = 26;
     }
 }

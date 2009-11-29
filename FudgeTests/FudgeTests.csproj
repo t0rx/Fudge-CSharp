@@ -80,6 +80,9 @@
     <Compile Include="Unit\Types\ByteArrayFieldTypeTest.cs" />
     <Compile Include="Unit\Types\FudgeArrayFieldTypeBaseTest.cs" />
     <Compile Include="Unit\Types\FudgeDateTimeTest.cs" />
+    <Compile Include="Unit\Types\FudgeDateTimeTypeTest.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Fudge\Fudge.csproj">

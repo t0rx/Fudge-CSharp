@@ -79,6 +79,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Types\FudgeArrayFieldTypeBase.cs" />
     <Compile Include="Types\FudgeDateTime.cs" />
+    <Compile Include="Types\FudgeDateTimeType.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Types\SecondaryFieldType.cs" />
     <Compile Include="Taxon\IFudgeTaxonomy.cs" />
     <Compile Include="Taxon\IFudgeTaxonomyResolver.cs" />

@@ -63,11 +63,11 @@ namespace Fudge.Tests.Unit.Types
         public void FriendlyConstructors()
         {
             var dt1 = new DateTime(2050, 7, 8, 23, 12, 7, 834, DateTimeKind.Unspecified);
-            var fdt1 = new FudgeDateTime(2050, 7, 8, 23, 12, 7, 834000000);
+            var fdt1 = new FudgeDateTime(2050, 7, 8, 23, 12, 7, 834000000, FudgeDateTime.DateTimeAccuracy.Nanosecond);
             Assert.Equal(dt1, fdt1.ToDateTime(DateTimeKind.Unspecified));
 
             var dt2 = new DateTime(2050, 7, 8, 22, 12, 7, 834, DateTimeKind.Utc);
-            var fdt2 = new FudgeDateTime(2050, 7, 8, 23, 12, 7, 834000000, 60);     // One hour ahead
+            var fdt2 = new FudgeDateTime(2050, 7, 8, 23, 12, 7, 834000000, 60, FudgeDateTime.DateTimeAccuracy.Nanosecond);     // One hour ahead
 
             Assert.Equal(dt2, fdt2.ToDateTime(DateTimeKind.Utc));
         }
@@ -79,9 +79,9 @@ namespace Fudge.Tests.Unit.Types
             int epochSecs = (int)Math.Floor((testDate - FudgeDateTime.Epoch).TotalSeconds);
             int nanos = 456*1000*1000;
 
-            var fdt1 = new FudgeDateTime(epochSecs, nanos);
-            var fdt2 = new FudgeDateTime(epochSecs, nanos, 0);
-            var fdt3 = new FudgeDateTime(epochSecs, nanos, 60);
+            var fdt1 = new FudgeDateTime(epochSecs, nanos, FudgeDateTime.DateTimeAccuracy.Nanosecond);
+            var fdt2 = new FudgeDateTime(epochSecs, nanos, 0, FudgeDateTime.DateTimeAccuracy.Nanosecond);
+            var fdt3 = new FudgeDateTime(epochSecs, nanos, 60, FudgeDateTime.DateTimeAccuracy.Nanosecond);
 
             Assert.Equal(testDate, fdt1.ToDateTime(DateTimeKind.Utc));
             Assert.Equal(testDate, fdt2.ToDateTime(DateTimeKind.Utc));
@@ -93,8 +93,26 @@ namespace Fudge.Tests.Unit.Types
         {
             Assert.Throws(typeof(ArgumentOutOfRangeException), () =>
             {
-                new FudgeDateTime(1, 2, 3);
+                new FudgeDateTime(1, 2, 3, FudgeDateTime.DateTimeAccuracy.Nanosecond);
             });
         }
+
+        [Fact]
+        public void ToStringFormatting()
+        {
+            Assert.Equal("19", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, 120, FudgeDateTime.DateTimeAccuracy.Century).ToString());
+            Assert.Equal("1997", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, 120, FudgeDateTime.DateTimeAccuracy.Year).ToString());
+            Assert.Equal("1997-01", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, 120, FudgeDateTime.DateTimeAccuracy.Month).ToString());
+            Assert.Equal("1997-01-01", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, 120, FudgeDateTime.DateTimeAccuracy.Day).ToString());
+            Assert.Equal("1997-01-01 12", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, FudgeDateTime.DateTimeAccuracy.Hour).ToString());
+            Assert.Equal("1997-01-01 12:05", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, FudgeDateTime.DateTimeAccuracy.Minute).ToString());
+            Assert.Equal("1997-01-01 12:05:06", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, FudgeDateTime.DateTimeAccuracy.Second).ToString());
+            Assert.Equal("1997-01-01 12:05:06 +02:00", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, 120, FudgeDateTime.DateTimeAccuracy.Second).ToString());
+            Assert.Equal("1997-01-01 12:05:06.001", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, FudgeDateTime.DateTimeAccuracy.Millisecond).ToString());
+            Assert.Equal("1997-01-01 12:05:06.001234", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, FudgeDateTime.DateTimeAccuracy.Microsecond).ToString());
+            Assert.Equal("1997-01-01 12:05:06.001234567 -01:30", new FudgeDateTime(1997, 1, 1, 12, 5, 6, 1234567, -90, FudgeDateTime.DateTimeAccuracy.Nanosecond).ToString());
+        }
+
+        // TODO t0rx 20091129 -- Test for accuracy of day or greater disabling time zone conversions
     }
 }

@@ -21,12 +21,13 @@ using System.Text;
 namespace Fudge.Types
 {
     // TODO t0rx 20091129 -- Summary for FudgeDateTime class
-    public class FudgeDateTime
+    public sealed class FudgeDateTime
     {
         private readonly int nanos;
         private readonly long secondsSinceEpoch;
         private readonly int offset;        // In units of 15 mins
         private readonly bool hasOffset;
+        private readonly DateTimeAccuracy accuracy;
         public static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         #region Magic numbers
@@ -47,6 +48,20 @@ namespace Fudge.Types
         /// This will base the offset of the <c>FudgeDateTime</c> on the <see cref="DateTimeKind"/> of the <see cref="DateTime"/>.
         /// </remarks>
         public FudgeDateTime(DateTime dt)
+            : this(dt, DateTimeAccuracy.Nanosecond)
+        {
+        }
+
+        /// <summary>
+        /// Constructs a <c>FudgeDateTime</c> based on a .net <see cref="DateTime"/>, specifying the <see cref="Accuracy"/> of the <c>DateTime</c>.
+        /// </summary>
+        /// <param name="dt">.net <see cref="DateTime"/> value to use.</param>
+        /// <param name="accuracy">Indicates the <see cref="Accuracy"/> of the <see cref="DateTime"/>.</param>
+        /// <remarks>
+        /// <para>This will base the offset of the <c>FudgeDateTime</c> on the <see cref="DateTimeKind"/> of the <see cref="DateTime"/>.</para>
+        /// <para>The <see cref="Accuracy"/> is used to indicate (for example) that only the date portion of this <c>DateTime</c> is meaningful.</para>
+        /// </remarks>
+        public FudgeDateTime(DateTime dt, DateTimeAccuracy accuracy)
         {
             this.nanos = GetRawNanos(dt);
             long rawSeconds = GetRawSecondsSinceEpoch(dt);
@@ -75,16 +90,17 @@ namespace Fudge.Types
             }
         }
 
-        public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos)
+        public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos, DateTimeAccuracy accuracy)
         {
             // TODO t0rx 20091129 -- Expand to handle dates outside the DateTime range
             this.nanos = nanos;
             this.secondsSinceEpoch = GetRawSecondsSinceEpoch(new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc));
             this.hasOffset = false;
             this.offset = 0;
+            this.accuracy = accuracy;
         }
 
-        public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos, int offsetMinutes)
+        public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos, int offsetMinutes, DateTimeAccuracy accuracy)
         {
             // TODO t0rx 20091129 -- Expand to handle dates outside the DateTime range
             if (offsetMinutes % OffsetUnitMinutes != 0)
@@ -96,17 +112,19 @@ namespace Fudge.Types
             this.hasOffset = true;
             this.hasOffset = true;
             this.offset = offsetMinutes / OffsetUnitMinutes;
+            this.accuracy = accuracy;
         }
 
-        public FudgeDateTime(long secondsSinceEpoch, int nanos)
+        public FudgeDateTime(long secondsSinceEpoch, int nanos, DateTimeAccuracy accuracy)
         {
             this.nanos = nanos;
             this.secondsSinceEpoch = secondsSinceEpoch;
             this.hasOffset = false;
             this.offset = 0;
+            this.accuracy = accuracy;
         }
 
-        public FudgeDateTime(long secondsSinceEpoch, int nanos, int offsetMinutes)
+        public FudgeDateTime(long secondsSinceEpoch, int nanos, int offsetMinutes, DateTimeAccuracy accuracy)
         {
             if (offsetMinutes % OffsetUnitMinutes != 0)
             {
@@ -116,6 +134,7 @@ namespace Fudge.Types
             this.secondsSinceEpoch = secondsSinceEpoch;
             this.hasOffset = true;
             this.offset = offsetMinutes / OffsetUnitMinutes;
+            this.accuracy = accuracy;
         }
 
         /// <summary>
@@ -150,6 +169,14 @@ namespace Fudge.Types
         public int OffsetMinutes
         {
             get { return offset * OffsetUnitMinutes; }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="Accuracy"/> of this datetime.
+        /// </summary>
+        public DateTimeAccuracy Accuracy
+        {
+            get { return accuracy; }
         }
 
         /// <summary>
@@ -190,6 +217,82 @@ namespace Fudge.Types
         public static implicit operator FudgeDateTime(DateTime dt)
         {
             return new FudgeDateTime(dt);
+        }
+
+        public static FudgeDateTime Now
+        {
+            get { return new FudgeDateTime(DateTime.Now); }
+        }
+
+        public enum DateTimeAccuracy
+        {
+            Nanosecond,
+            Microsecond,
+            Millisecond,
+            Second,
+            Minute,
+            Hour,
+            Day,
+            Month,
+            Year,
+            Century
+        }
+
+        private readonly string[] AccuracyFormatters =
+            {
+                "yyyy-MM-dd HH:mm:ss",              // Special case for nanos as DateTime doesn't go that far
+                "yyyy-MM-dd HH:mm:ss.ffffff",
+                "yyyy-MM-dd HH:mm:ss.fff",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm",
+                "yyyy-MM-dd HH",
+                "yyyy-MM-dd",
+                "yyyy-MM",
+                "yyyy",
+                "cc"                                // Special case for centuries as not supported by DateTime
+            };
+
+        public override string ToString()
+        {
+            string format = AccuracyFormatters[(int)accuracy];
+            var dt = ToDateTime(DateTimeKind.Unspecified);
+            string result;
+            switch (accuracy)
+            {
+                case DateTimeAccuracy.Nanosecond:
+                    result = dt.ToString(format) + "." + nanos.ToString("D9");
+                    break;
+                case DateTimeAccuracy.Century:
+                    result = (dt.Year / 100).ToString("D2");
+                    break;
+                default:
+                    result = dt.ToString(format);
+                    break;
+            }
+            if (hasOffset && accuracy < DateTimeAccuracy.Day)
+            {
+                string offsetFormat = offset < 0 ? " {0:00}:{1:00}" : " +{0:00}:{1:00}";
+                string offsetString = string.Format(offsetFormat, OffsetMinutes / 60, Math.Abs(OffsetMinutes) % 60);
+                result += offsetString;
+            }
+            return result;
+        }
+
+        public override bool Equals(object obj)
+        {
+            FudgeDateTime other = obj as FudgeDateTime;
+            if (other == null) return false;
+
+            return this.secondsSinceEpoch == other.secondsSinceEpoch &&
+                this.nanos == other.nanos &&
+                this.offset == other.offset &&
+                this.hasOffset == other.hasOffset &&
+                this.accuracy == other.accuracy;
+        }
+
+        public override int GetHashCode()
+        {
+            return secondsSinceEpoch.GetHashCode() ^ nanos.GetHashCode();
         }
 
         private static long GetRawSecondsSinceEpoch(DateTime dt)

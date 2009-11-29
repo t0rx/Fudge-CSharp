@@ -329,9 +329,8 @@ namespace Fudge.Tests.Unit
         [Fact]
         public void SecondaryTypes()
         {
-            var guidType = new SecondaryFieldType<Guid, byte[]>(ByteArrayFieldType.Length16Instance, raw => new Guid(raw), value => value.ToByteArray());
+            // We test with the GUID secondary type, which is added automatically to the type dictionary
             var typeDictionary = new FudgeTypeDictionary();
-            typeDictionary.AddType(guidType);
 
             Guid guid = Guid.NewGuid();
             FudgeMsg msg = new FudgeMsg(typeDictionary);
