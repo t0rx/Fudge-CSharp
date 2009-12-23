@@ -20,7 +20,15 @@ using System.Text;
 
 namespace Fudge.Types
 {
-    // TODO t0rx 20091129 -- Summary for FudgeDateTime class
+    /// <summary>
+    /// <c>FudgeDateTime</c> encapsulates the Fudge representation of a date and time.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the .net <see cref="DateTime"/> class, <c>FudgeDateTime</c> has the ability to
+    /// specify that the date and time are relative to a particular timezone offset.  It also
+    /// carries an indicator of how accurate the date/time is - e.g. just the date part, or
+    /// to the nearest second, etc.
+    /// </remarks>
     public sealed class FudgeDateTime
     {
         private readonly int nanos;
@@ -28,6 +36,7 @@ namespace Fudge.Types
         private readonly int offset;        // In units of 15 mins
         private readonly bool hasOffset;
         private readonly DateTimeAccuracy accuracy;
+        /// <summary><c>Epoch</c> is the base date from which dates are relatve - 1st January 1970.</summary>
         public static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         #region Magic numbers
@@ -90,6 +99,17 @@ namespace Fudge.Types
             }
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="year"></param>
+        /// <param name="month"></param>
+        /// <param name="day"></param>
+        /// <param name="hour"></param>
+        /// <param name="minute"></param>
+        /// <param name="second"></param>
+        /// <param name="nanos"></param>
+        /// <param name="accuracy"></param>
         public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos, DateTimeAccuracy accuracy)
         {
             // TODO t0rx 20091129 -- Expand to handle dates outside the DateTime range
@@ -100,6 +120,18 @@ namespace Fudge.Types
             this.accuracy = accuracy;
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="year"></param>
+        /// <param name="month"></param>
+        /// <param name="day"></param>
+        /// <param name="hour"></param>
+        /// <param name="minute"></param>
+        /// <param name="second"></param>
+        /// <param name="nanos"></param>
+        /// <param name="offsetMinutes"></param>
+        /// <param name="accuracy"></param>
         public FudgeDateTime(int year, int month, int day, int hour, int minute, int second, int nanos, int offsetMinutes, DateTimeAccuracy accuracy)
         {
             // TODO t0rx 20091129 -- Expand to handle dates outside the DateTime range
@@ -115,6 +147,12 @@ namespace Fudge.Types
             this.accuracy = accuracy;
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="secondsSinceEpoch">Number of seconds after (or before) 1970-01-01 00:00:00</param>
+        /// <param name="nanos">Fraction of a second, expressed in nanoseconds.</param>
+        /// <param name="accuracy">Accuracy of this date/time - see <see cref="DateTimeAccuracy"/>.</param>
         public FudgeDateTime(long secondsSinceEpoch, int nanos, DateTimeAccuracy accuracy)
         {
             this.nanos = nanos;
@@ -124,6 +162,13 @@ namespace Fudge.Types
             this.accuracy = accuracy;
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="secondsSinceEpoch">Number of seconds after (or before) 1970-01-01 00:00:00</param>
+        /// <param name="nanos">Fraction of a second, expressed in nanoseconds.</param>
+        /// <param name="offsetMinutes">Number of minutes that this timezone is offset from UTC.</param>
+        /// <param name="accuracy">Accuracy of this date/time - see <see cref="DateTimeAccuracy"/>.</param>
         public FudgeDateTime(long secondsSinceEpoch, int nanos, int offsetMinutes, DateTimeAccuracy accuracy)
         {
             if (offsetMinutes % OffsetUnitMinutes != 0)
@@ -214,27 +259,52 @@ namespace Fudge.Types
             }
         }
 
+        /// <summary>
+        /// Converts from a .net <see cref="DateTime"/> to a <see cref="FudgeDateTime"/>.
+        /// </summary>
+        /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
+        /// <returns>Equivalent <see cref="FudgeDateTime"/>.</returns>
+        /// <remarks>The <see cref="FudgeDateTime"/> will take into account whether the .net <see cref="DateTime"/> is
+        /// local time, UTC or without a timezone, and map to the equivalent offsets.</remarks>
         public static implicit operator FudgeDateTime(DateTime dt)
         {
             return new FudgeDateTime(dt);
         }
 
+        /// <summary>
+        /// Gets a <see cref="FudgeDateTime"/>object that is set to the current date and time on
+        /// this computer, expressed with the local time offset.
+        /// </summary>
+        /// <returns>A FudgeDateTime whose value is the current local date and time.</returns>
         public static FudgeDateTime Now
         {
             get { return new FudgeDateTime(DateTime.Now); }
         }
 
+        /// <summary>
+        /// <c>DateTimeAccuracy</c> expresses the resolution of a <see cref="FudgeDateTime"/> object.
+        /// </summary>
         public enum DateTimeAccuracy
         {
+            /// <summary>The object is accurate to the nearest nanosecond.</summary>
             Nanosecond,
+            /// <summary>The object is accurate to the nearest microsecond.</summary>
             Microsecond,
+            /// <summary>The object is accurate to the nearest millisecond.</summary>
             Millisecond,
+            /// <summary>The object is accurate to the nearest second.</summary>
             Second,
+            /// <summary>The object is accurate to the nearest minute.</summary>
             Minute,
+            /// <summary>The object is accurate to the nearest hour.</summary>
             Hour,
+            /// <summary>The object is accurate to the nearest day.</summary>
             Day,
+            /// <summary>The object is accurate to the nearest month.</summary>
             Month,
+            /// <summary>The object is accurate to the nearest year.</summary>
             Year,
+            /// <summary>The object is accurate to the nearest century.</summary>
             Century
         }
 
@@ -252,6 +322,7 @@ namespace Fudge.Types
                 "cc"                                // Special case for centuries as not supported by DateTime
             };
 
+        /// <inheritdoc />
         public override string ToString()
         {
             string format = AccuracyFormatters[(int)accuracy];
@@ -278,6 +349,7 @@ namespace Fudge.Types
             return result;
         }
 
+        /// <inheritdoc />
         public override bool Equals(object obj)
         {
             FudgeDateTime other = obj as FudgeDateTime;
@@ -290,6 +362,7 @@ namespace Fudge.Types
                 this.accuracy == other.accuracy;
         }
 
+        /// <inheritdoc />
         public override int GetHashCode()
         {
             return secondsSinceEpoch.GetHashCode() ^ nanos.GetHashCode();

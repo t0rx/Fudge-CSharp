@@ -22,9 +22,14 @@ using Fudge.Taxon;
 
 namespace Fudge.Types
 {
+    /// <summary>
+    /// The type definition for a date/time value.
+    /// </summary>
     public class FudgeDateTimeType : FudgeFieldType<FudgeDateTime>
     {
         // TODO t0rx 20091129 -- Control behaviour of converting to/from DateTime through context property
+
+        /// <summary>A type definition for date/time values.</summary>
         public static readonly FudgeDateTimeType Instance = new FudgeDateTimeType();
 
         #region Magic numbers
@@ -33,12 +38,16 @@ namespace Fudge.Types
         private const int OffsetUnitMinutes = 15;
         #endregion
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public FudgeDateTimeType()
             : base(FudgeTypeDictionary.DATETIME_TYPE_ID, false, 12)
         {
         }
 
-        public override FudgeDateTime ReadTypedValue(BinaryReader input, int dataSize, FudgeTypeDictionary typeDictionary)
+        /// <inheritdoc />
+        public override FudgeDateTime ReadTypedValue(BinaryReader input, int dataSize)
         {
             byte options = input.ReadByte();
             byte offset = (byte)input.ReadSByte();
@@ -51,7 +60,8 @@ namespace Fudge.Types
             return hasOffset ? new FudgeDateTime(seconds, nanos, offset * OffsetUnitMinutes, accuracy) : new FudgeDateTime(seconds, nanos, accuracy);
         }
 
-        public override void WriteValue(BinaryWriter output, FudgeDateTime value, IFudgeTaxonomy taxonomy)
+        /// <inheritdoc />
+        public override void WriteValue(BinaryWriter output, FudgeDateTime value)
         {
             byte options = (byte)value.Accuracy;
             sbyte offset = 0;

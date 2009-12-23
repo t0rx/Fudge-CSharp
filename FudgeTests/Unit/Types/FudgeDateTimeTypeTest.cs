@@ -32,11 +32,11 @@ namespace Fudge.Tests.Unit.Types
 
             var stream = new MemoryStream();
             var writer = new BinaryWriter(stream);
-            FudgeDateTimeType.Instance.WriteValue(writer, testDate, null);
+            FudgeDateTimeType.Instance.WriteValue(writer, testDate);
 
             var stream2 = new MemoryStream(stream.ToArray());
             var reader = new BinaryReader(stream2);
-            var resultDate = FudgeDateTimeType.Instance.ReadTypedValue(reader, 0, null);
+            var resultDate = FudgeDateTimeType.Instance.ReadTypedValue(reader, 0);
 
             Assert.Equal(testDate, resultDate);
         }
