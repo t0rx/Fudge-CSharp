@@ -56,7 +56,7 @@ namespace Client
             new Thread(() => { RunReceiver(stream); }).Start();
 
             // Create our output writer onto the stream to send messages to the server
-            var output = new FudgeXmlStreamWriter(stream, "msg") { AutoFlushOnMessageEnd = true };
+            var output = new FudgeXmlStreamWriter(context, stream, "msg") { AutoFlushOnMessageEnd = true };
 
             // Now just loop getting input from the console until we're done
             while (!closed)
@@ -94,8 +94,8 @@ namespace Client
             // the incoming data then raise an event to tell us when we have a complete message to
             // process, whereas the server pulls a single message at a time directly from the input
             // reader.
-            
-            var inputReader = new FudgeXmlStreamReader(stream);                 // We're reading XML from the stream...
+
+            var inputReader = new FudgeXmlStreamReader(context, stream);        // We're reading XML from the stream...
             var messages = new FudgeMsgStreamWriter(context);                   // ...and turning it into messages...
             var pipe = new FudgeStreamPipe(inputReader, messages);              // ...as they arrive (using a pipe)...
             pipe.MessageProcessed += () => { HandleMessage(pipe, messages); };  // ...then processing them.
