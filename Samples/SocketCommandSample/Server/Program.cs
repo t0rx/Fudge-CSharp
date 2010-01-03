@@ -50,7 +50,7 @@ namespace Server
                     // Wait for a new connection to process
                     using (var connectionSocket = socket.Accept())
                     {
-                        // Now handle it (note we won't accept any others until we're done with this one
+                        // Now handle it (note we won't accept any others until we're done with this one)
                         ProcessConnectionWithLoop(connectionSocket);
                     }
                 }
@@ -59,6 +59,10 @@ namespace Server
 
         private void ProcessConnectionWithLoop(Socket socket)
         {
+            // Here we demonstrate a slightly different way of receiving the messages than we're using
+            // in the client.  In this case we "pull" the next message using input.ReadMsg rather than
+            // in the client where we use a pipe to raise an event when a message is received.
+
             Console.WriteLine("Got connection from " + socket.RemoteEndPoint);
             try
             {

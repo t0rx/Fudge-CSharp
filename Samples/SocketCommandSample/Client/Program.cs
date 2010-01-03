@@ -89,10 +89,16 @@ namespace Client
         /// <param name="stream"></param>
         private void RunReceiver(Stream stream)
         {
+            // Here we demonstrate a slightly different way of receiving the messages than we're using
+            // in the server.  In this case we set up a pipe to automatically generate FudgMsgs from
+            // the incoming data then raise an event to tell us when we have a complete message to
+            // process, whereas the server pulls a single message at a time directly from the input
+            // reader.
+            
             var inputReader = new FudgeXmlStreamReader(stream);                 // We're reading XML from the stream...
             var messages = new FudgeMsgStreamWriter(context);                   // ...and turning it into messages...
-            var pipe = new FudgeStreamPipe(inputReader, messages);              // ...as they arrive using a pipe...
-            pipe.MessageProcessed += () => { HandleMessage(pipe, messages); };    // ...then processing them.
+            var pipe = new FudgeStreamPipe(inputReader, messages);              // ...as they arrive (using a pipe)...
+            pipe.MessageProcessed += () => { HandleMessage(pipe, messages); };  // ...then processing them.
 
             // Run until there's no more data
             pipe.Process();
@@ -101,16 +107,22 @@ namespace Client
         private void HandleMessage(FudgeStreamPipe pipe, FudgeMsgStreamWriter messageSource)
         {
             // Get the message we've just received and output it
-            var msg = messageSource.DequeueMessage();
+            FudgeMsg msg = messageSource.DequeueMessage();
 
+            // Sample server puts the overall status in a field called "status"
             switch (msg.GetString("status"))
             {
                 case "success":
+                    // Any additional message is in a field called "output"
                     Console.WriteLine("[" + msg.GetString("output") + "]");
                     break;
                 case "fail":
-                    Console.WriteLine("[FAIL: " + msg.GetMessage("error") + "]");
-                    break;
+                    {
+                        // May be more complex information in an "error" field, so just output as is
+                        IFudgeFieldContainer errorMessage = msg.GetMessage("error");
+                        Console.WriteLine("[FAIL: " + errorMessage + "]");
+                        break;
+                    }
                 case "close":
                     // Server closing the connection
                     Console.WriteLine("[Server sent close]");
