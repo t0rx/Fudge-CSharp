@@ -23,17 +23,20 @@ using Xunit;
 using System.Xml;
 using Fudge.Encodings;
 using Fudge.Types;
+using System.IO;
 
 namespace Fudge.Tests.Unit.Encodings
 {
     public class FudgeXmlStreamWriterTest
     {
+        private FudgeContext context = new FudgeContext();
+
         [Fact]
         public void SimpleTest()
         {
             var sb = new StringBuilder();
             var xmlWriter = XmlWriter.Create(sb, new XmlWriterSettings { OmitXmlDeclaration = true });
-            var writer = new FudgeXmlStreamWriter(xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
+            var writer = new FudgeXmlStreamWriter(context, xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
 
             writer.StartMessage();
             writer.WriteField("name", null, StringFieldType.Instance, "Bob");
@@ -47,7 +50,7 @@ namespace Fudge.Tests.Unit.Encodings
         {
             var sb = new StringBuilder();
             var xmlWriter = XmlWriter.Create(sb, new XmlWriterSettings { OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Fragment });
-            var writer = new FudgeXmlStreamWriter(xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
+            var writer = new FudgeXmlStreamWriter(context, xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
 
             writer.StartMessage();
             writer.WriteField("name", null, StringFieldType.Instance, "Bob");
@@ -70,8 +73,8 @@ namespace Fudge.Tests.Unit.Encodings
 
             var sb = new StringBuilder();
             var xmlWriter = XmlWriter.Create(sb, new XmlWriterSettings { OmitXmlDeclaration = true });
-            var writer = new FudgeXmlStreamWriter(xmlWriter, "msg");
-            var reader = new FudgeMsgStreamReader(msg);
+            var writer = new FudgeXmlStreamWriter(context, xmlWriter, "msg");
+            var reader = new FudgeMsgStreamReader(context, msg);
             new FudgeStreamPipe(reader, writer).Process();
             xmlWriter.Flush();
 
@@ -85,13 +88,26 @@ namespace Fudge.Tests.Unit.Encodings
             var msg = new FudgeMsg(new Field("blank", IndicatorType.Instance));
             var sb = new StringBuilder();
             var xmlWriter = XmlWriter.Create(sb, new XmlWriterSettings { OmitXmlDeclaration = true });
-            var writer = new FudgeXmlStreamWriter(xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
-            var reader = new FudgeMsgStreamReader(msg);
+            var writer = new FudgeXmlStreamWriter(context, xmlWriter, "msg") { AutoFlushOnMessageEnd = true };
+            var reader = new FudgeMsgStreamReader(context, msg);
             new FudgeStreamPipe(reader, writer).Process();
             xmlWriter.Flush();
 
             string s = sb.ToString();
             Assert.Equal("<msg><blank /></msg>", s);
+        }
+
+        [Fact]
+        public void PicksUpPropertiesFromContext()
+        {
+            var newContext = new FudgeContext();
+
+            var writer = new FudgeXmlStreamWriter(newContext, XmlWriter.Create(new MemoryStream()), "msg");
+            Assert.True(writer.AutoFlushOnMessageEnd);
+
+            newContext.SetProperty(FudgeXmlStreamWriter.AutoFlushOnMessageEndProperty, false);
+            writer = new FudgeXmlStreamWriter(newContext, XmlWriter.Create(new MemoryStream()), "msg");
+            Assert.False(writer.AutoFlushOnMessageEnd);
         }
     }
 }
