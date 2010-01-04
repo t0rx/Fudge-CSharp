@@ -68,11 +68,11 @@ namespace Server
             {
                 // Create our output channel and send a welcome message
                 var stream = new NetworkStream(socket);
-                var output = new FudgeXmlStreamWriter(context, stream, "msg") { AutoFlushOnMessageEnd = true };
+                var output = new FudgeEncodedStreamWriter(context, stream);
                 SendSuccess(output, "Welcome to " + socket.LocalEndPoint + ", type ? for help");
 
                 // Create an input channel
-                var input = new FudgeXmlStreamReader(context, stream);
+                var input = new FudgeEncodedStreamReader(context, stream);
 
                 while (true)
                 {
