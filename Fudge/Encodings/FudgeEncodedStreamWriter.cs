@@ -290,7 +290,7 @@ namespace Fudge.Encodings
             nWritten += 1;
             bw.Write((byte)version);
             nWritten += 1;
-            bw.Write((short)taxonomy);      // TODO 2009-10-04 t0rx -- This should probably be ushort, but we'll need to change throughout
+            bw.Write((short)taxonomy);      // REVIEW 2009-10-04 t0rx -- Should this be ushort?
             nWritten += 2;
             bw.Write(messageSize);
             nWritten += 4;
@@ -314,6 +314,9 @@ namespace Fudge.Encodings
 
             // First, normalize the name/ordinal bit
             NormalizeNameAndOrdinal(ref name, ref ordinal, taxonomy);
+
+            // Reduce the value to minimal form
+            value = type.Minimize(value, ref type);
 
             // Now do the field header
             int valueSize = type.IsVariableSize ? type.GetVariableSize(value, taxonomy) : type.FixedSize;
@@ -366,14 +369,14 @@ namespace Fudge.Encodings
             }
             if (name != null)
             {
-                int utf8size = ModifiedUTF8Util.ModifiedUTF8Length(name);
+                int utf8size = StringFieldType.Encoding.GetByteCount(name);
                 if (utf8size > 0xFF)
                 {
                     throw new ArgumentOutOfRangeException("UTF-8 encoded field name cannot exceed 255 characters. Name \"" + name + "\" is " + utf8size + " bytes encoded.");
                 }
                 bw.Write((byte)utf8size);
                 nWritten++;
-                nWritten += ModifiedUTF8Util.WriteModifiedUTF8(name, bw);
+                nWritten += StringFieldType.WriteString(bw, name);
             }
 
             return nWritten;

@@ -50,7 +50,17 @@ namespace Fudge.Encodings
         }
 
         /// <summary>
-        /// Gets the list of all <see cref="FudgeMsg"/>s that have been written withing removing them from the queue.
+        /// Gets the list of all <see cref="FudgeMsg"/>s that have been written and removes them from the queue.
+        /// </summary>
+        public IList<FudgeMsg> GetAllMessages()
+        {
+            var result = new List<FudgeMsg>(messages);
+            messages.Clear();
+            return result;
+        }
+
+        /// <summary>
+        /// Gets the list of all <see cref="FudgeMsg"/>s that have been written without removing them from the queue.
         /// </summary>
         public IList<FudgeMsg> PeekAllMessages()
         {

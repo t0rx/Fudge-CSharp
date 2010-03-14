@@ -269,16 +269,13 @@ namespace Fudge.Encodings
                     oneTokenAhead = false;
                     break;
                 }
-                else
-                {
-                    // TODO t0rx 2009-11-15 -- Handle odd stuff in XML value
-                }
+
+                // Ignore anything else
             }
         }
 
         private object GetValue(string data)
         {
-            // TODO t0rx 2009-11-15 -- Attempt to convert to best type
             FieldType = StringFieldType.Instance;
             return data;
         }

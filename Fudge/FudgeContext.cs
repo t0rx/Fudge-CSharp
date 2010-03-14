@@ -51,7 +51,7 @@ namespace Fudge
         private FudgeTypeDictionary typeDictionary = new FudgeTypeDictionary();
         private readonly FudgeTypeHandler typeHandler;
         private ITaxonomyResolver taxonomyResolver;
-        private object[] properties;     // REVIEW t0rx 2009-11-28 -- Should we only create this on demand?
+        private object[] properties;     // REVIEW 2009-11-28 t0rx -- Should we only create this on demand?
         private FudgeStreamParser parser;
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace Fudge
                     throw new ArgumentNullException("value", "Every Fudge context must have a type dictionary.");
                 }
                 typeDictionary = value;
-                typeHandler.TypeDictionary = value;     // TODO 2009-12-23 t0rx -- This smells
+                typeHandler.TypeDictionary = value;
             }
         }
 
@@ -162,7 +162,7 @@ namespace Fudge
         {
             try
             {
-                var writer = new FudgeEncodedStreamWriter(this);            // TODO t0rx 2009-11-12 -- Fudge-Java gets this from an allocated queue
+                var writer = new FudgeEncodedStreamWriter(this);
                 writer.TaxonomyId = taxonomyId;
                 writer.Reset(bw);
                 writer.StartMessage();
@@ -201,7 +201,6 @@ namespace Fudge
             FudgeMsgEnvelope envelope;
             try
             {
-                // TODO 2009-12-23 t0rx -- Should this now be refactored to use FudgeMsgStreamReader?
                 envelope = parser.Parse(s);
             }
             catch (IOException e)
@@ -323,6 +322,7 @@ namespace Fudge
             public object ConvertType(object value, Type type)
             {
                 if (value == null) return null;
+                if (value.GetType() == type) return value;
 
                 if (!type.IsAssignableFrom(value.GetType()))
                 {

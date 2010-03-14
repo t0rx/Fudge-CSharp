@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Fudge.Util;
 
 namespace Fudge.Encodings
 {
@@ -48,7 +49,7 @@ namespace Fudge.Encodings
         /// <param name="msg">Message to write.</param>
         public static void WriteMsg(this IFudgeStreamWriter writer, FudgeMsg msg)
         {
-            var reader = new FudgeMsgStreamReader(msg.FudgeContext, msg);
+            var reader = new FudgeMsgStreamReader(msg.Context, msg);
             var pipe = new FudgeStreamPipe(reader, writer);
             pipe.ProcessOne();
         }

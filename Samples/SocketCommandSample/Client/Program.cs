@@ -25,6 +25,7 @@ using Fudge.Encodings;
 using System.Threading;
 using Fudge;
 using System.IO;
+using Fudge.Util;
 
 namespace Client
 {

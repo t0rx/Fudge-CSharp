@@ -43,7 +43,7 @@ namespace Fudge
     /// </remarks>
     public class FudgeMsg : FudgeEncodingObject, IMutableFudgeFieldContainer
     {
-        private readonly FudgeContext fudgeContext;
+        private readonly FudgeContext context;
         private readonly List<FudgeMsgField> fields = new List<FudgeMsgField>();
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Fudge
             {
                 throw new ArgumentNullException("context", "Context must be provided");
             }
-            this.fudgeContext = context;
+            this.context = context;
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Fudge
             {
                 throw new ArgumentNullException("Cannot initialize from a null other FudgeMsg");
             }
-            this.fudgeContext = other.fudgeContext;
+            this.context = other.context;
             InitializeFromByteArray(other.ToByteArray());
         }
 
@@ -96,34 +96,21 @@ namespace Fudge
         }
 
         /// <summary>
-        /// Constructs a new <see cref="FudgeMsg"/> from raw binary data, using a given context.
-        /// </summary>
-        /// <param name="byteArray">Binary data to use.</param>
-        /// <param name="context"><see cref="FudgeContext"/> for the message.</param>
-        public FudgeMsg(byte[] byteArray, FudgeContext context)
-        {
-            if (context == null)
-            {
-                throw new ArgumentNullException("context", "Context must be provided");
-            }
-        }
-
-        /// <summary>
         /// Populates the message fields from the encoded data. If the array is larger than the Fudge envelope, any additional data is ignored.
         /// </summary>
         /// <param name="byteArray">the encoded data to populate this message with</param>
         protected void InitializeFromByteArray(byte[] byteArray)
         {
-            FudgeMsgEnvelope other = fudgeContext.Deserialize(byteArray);
+            FudgeMsgEnvelope other = context.Deserialize(byteArray);
             fields.AddRange(other.Message.fields);
         }
 
         /// <summary>
         /// Gets the <see cref="FudgeContext"/> for this message.
         /// </summary>
-        public FudgeContext FudgeContext
+        public FudgeContext Context
         {
-            get { return fudgeContext; }
+            get { return context; }
         }
 
         #region IMutableFudgeFieldContainer implementation
@@ -157,7 +144,7 @@ namespace Fudge
         }
 
         /// <inheritdoc />
-        public void Add(string name, int? ordinal, FudgeFieldType type, object value)
+        public virtual void Add(string name, int? ordinal, FudgeFieldType type, object value)
         {
             if (fields.Count >= short.MaxValue)
             {
@@ -170,7 +157,7 @@ namespace Fudge
             if (type == null)
             {
                 // See if we can derive it
-                type = fudgeContext.TypeHandler.DetermineTypeFromValue(value);
+                type = context.TypeHandler.DetermineTypeFromValue(value);
                 if (type == null)
                 {
                     throw new ArgumentException("Cannot determine a Fudge type for value " + value + " of type " + value.GetType());
@@ -193,21 +180,31 @@ namespace Fudge
         #endregion
 
         /// <summary>
-        /// Adds all the fields in the enumerable to this message.
+        /// Adds all the values in the enumerable to this message as fields of a given name.
         /// </summary>
-        /// <param name="fields">Enumerable of fields to add.</param>
-        public void Add(IEnumerable<IFudgeField> fields)
+        /// <param name="name">Name of the field.</param>
+        /// <param name="values">Enumerable of values to add.</param>
+        public void AddAll<T>(string name, IEnumerable<T> values)
         {
-            // TODO t0rx 20091017 -- Add this method to IMutableFudgeFieldContainer?
-            if (fields == null)
-                return; // Whatever
-
-            foreach (var field in fields)
+            foreach (T val in values)
             {
-                Add(field);
+                Add(name, val);
             }
         }
-        
+
+        /// <summary>
+        /// Adds all the values in the enumerable to this message as fields with a given ordinal.
+        /// </summary>
+        /// <param name="ordinal">Ordinal of the field.</param>
+        /// <param name="values">Enumerable of values to add.</param>
+        public void AddAll<T>(int ordinal, IEnumerable<T> values)
+        {
+            foreach (T val in values)
+            {
+                Add(ordinal, val);
+            }
+        }
+
         #region IFudgeFieldContainer implementation
 
         /// <inheritdoc />
@@ -314,7 +311,7 @@ namespace Fudge
         }
 
         /// <inheritdoc />
-        public object GetValue(string name)
+        public virtual object GetValue(string name)
         {
             foreach (FudgeMsgField field in fields)
             {
@@ -324,6 +321,42 @@ namespace Fudge
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Returns the values of all fields with a given name as a specific type.
+        /// </summary>
+        /// <typeparam name="T">Type to return values as.</typeparam>
+        /// <param name="name">Name of fields to get.</param>
+        /// <returns>List of values of the given type.</returns>
+        public IList<T> GetAllValues<T>(string name)
+        {
+            var fields = GetAllByName(name);
+            int nFields = fields.Count;
+            T[] result = new T[nFields];
+            for (int i = 0; i < nFields; i++)
+            {
+                result[i] = (T)context.TypeHandler.ConvertType(fields[i].Value, typeof(T));
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns the values of all fields with a given ordinal as a specific type.
+        /// </summary>
+        /// <typeparam name="T">Type to return values as.</typeparam>
+        /// <param name="ordinal">Ordinal of fields to get.</param>
+        /// <returns>List of values of the given type.</returns>
+        public IList<T> GetAllValues<T>(int ordinal)
+        {
+            var fields = GetAllByOrdinal(ordinal);
+            int nFields = fields.Count;
+            T[] result = new T[nFields];
+            for (int i = 0; i < nFields; i++)
+            {
+                result[i] = (T)context.TypeHandler.ConvertType(fields[i].Value, typeof(T));
+            }
+            return result;
         }
 
         /// <inheritdoc cref="IFudgeFieldContainer.GetValue{T}(System.String)" />
@@ -336,11 +369,11 @@ namespace Fudge
         public object GetValue(string name, Type type)
         {
             object value = GetValue(name);
-            return fudgeContext.TypeHandler.ConvertType(value, type);
+            return context.TypeHandler.ConvertType(value, type);
         }
 
         /// <inheritdoc />
-        public object GetValue(int ordinal)
+        public virtual object GetValue(int ordinal)
         {
             foreach (FudgeMsgField field in fields)
             {
@@ -362,24 +395,41 @@ namespace Fudge
         public object GetValue(int ordinal, Type type)
         {
             object value = GetValue(ordinal);
-            return fudgeContext.TypeHandler.ConvertType(value, type);
+            return context.TypeHandler.ConvertType(value, type);
         }
 
         /// <inheritdoc />
-        public object GetValue(string name, int? ordinal)
+        public virtual object GetValue(string name, int? ordinal)
         {
-            foreach (FudgeMsgField field in fields)
+            int index = GetIndex(name, ordinal);
+            return index == -1 ? null : fields[index].Value;
+        }
+
+        /// <summary>
+        /// Finds ths index of the first field with matching name or ordinal.
+        /// </summary>
+        /// <param name="name">Name of field, or <c>null</c> to match on ordinal.</param>
+        /// <param name="ordinal">Ordinal of field, or <c>null</c> to match on name.</param>
+        /// <returns>Index of first matching field, or <c>-1</c> if not found.</returns>
+        /// <remarks>If the ordinal matches, the name is not compared.</remarks>
+        protected int GetIndex(string name, int? ordinal)
+        {
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if ((ordinal != null) && (ordinal == field.Ordinal))
                 {
-                    return field.Value;
+                    return i;
                 }
                 if ((name != null) && (name == field.Name))
                 {
-                    return field.Value;
+                    return i;
                 }
             }
-            return null;
+
+            // Not found
+            return -1;
         }
 
         /// <inheritdoc cref="IFudgeFieldContainer.GetValue{T}(System.String,System.Int32?)"/>
@@ -392,7 +442,7 @@ namespace Fudge
         public object GetValue(string name, int? ordinal, Type type)
         {
             object value = GetValue(name, ordinal);
-            return fudgeContext.TypeHandler.ConvertType(value, type);
+            return context.TypeHandler.ConvertType(value, type);
         }
 
         // Primitive Queries:
@@ -629,8 +679,8 @@ namespace Fudge
 
         private FudgeMsg CopyContainer(IFudgeFieldContainer container)
         {
-            var msg = fudgeContext.NewMessage();
-            msg.Add(container);
+            var msg = context.NewMessage();
+            msg.AddAll(container);
             return msg;
         }
 
@@ -640,7 +690,7 @@ namespace Fudge
         /// <returns>an array containing the encoded message</returns>
         public byte[] ToByteArray()
         {
-            return fudgeContext.ToByteArray(this);
+            return context.ToByteArray(this);
         }
 
         // TODO 2009-12-14 Andrew -- should we have a ToByteArray that accepts a taxonomy ?
