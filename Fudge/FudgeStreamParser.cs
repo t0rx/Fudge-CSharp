@@ -68,8 +68,7 @@ namespace Fudge
         /// <returns></returns>
         public FudgeMsgEnvelope Parse(BinaryReader binaryReader)
         {
-            FudgeEncodedStreamReader reader = new FudgeEncodedStreamReader(FudgeContext);
-            reader.Reset(binaryReader);
+            FudgeEncodedStreamReader reader = new FudgeEncodedStreamReader(FudgeContext, binaryReader);
             FudgeStreamElement element = reader.MoveNext();
             if (element == FudgeStreamElement.NoElement)
             {

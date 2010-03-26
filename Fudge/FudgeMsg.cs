@@ -221,7 +221,7 @@ namespace Fudge
             // Fudge-Java just returns a read-only wrapper, but we can't do that in a typed way in .net 3.5
             //var copy = new List<IFudgeField>(fields.Cast<IFudgeField>()); // Cast is specific to the linq namespace
             //return copy;
-            return fields.ConvertAll<IFudgeField>(new Converter<FudgeMsgField, IFudgeField>(FudgeMsgField.toIFudgeField));
+            return fields.ConvertAll<IFudgeField>(new Converter<FudgeMsgField, IFudgeField>(FudgeMsgField.ToIFudgeField));
         }
 
         /// <inheritdoc />

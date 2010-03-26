@@ -77,12 +77,15 @@
     <Compile Include="FudgeStreamElement.cs" />
     <Compile Include="FudgeStreamParser.cs" />
     <Compile Include="IAppendingFudgeFieldContainer.cs" />
+    <Compile Include="Serialization\Reflection\BeforeAfterSerializationMixin.cs" />
     <Compile Include="Serialization\Reflection\DataContractSurrogate.cs" />
     <Compile Include="Serialization\Reflection\DotNetSeializationSurrogateSurrogate.cs" />
     <Compile Include="Serialization\Reflection\DotNetSerializableSurrogate.cs" />
     <Compile Include="Serialization\Reflection\ImmutableSurrogate.cs" />
+    <Compile Include="Serialization\Reflection\MemberSerializerMixin.cs" />
     <Compile Include="Serialization\Reflection\ReflectionUtil.cs" />
     <Compile Include="Serialization\Reflection\SerializableAttributeSurrogate.cs" />
+    <Compile Include="Serialization\Reflection\SerializationInfoMixin.cs" />
     <Compile Include="Util\FudgeStreamPipe.cs" />
     <Compile Include="IFudgeFieldContainer.cs" />
     <Compile Include="FudgeFieldType.cs" />

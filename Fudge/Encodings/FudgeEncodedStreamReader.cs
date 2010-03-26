@@ -33,7 +33,7 @@ namespace Fudge.Encodings
     public class FudgeEncodedStreamReader : FudgeStreamReaderBase
     {
         // Injected Inputs:
-        private BinaryReader reader;
+        private readonly BinaryReader reader;
         private readonly FudgeContext fudgeContext;
         // Runtime State:
         private readonly Stack<MessageProcessingState> processingStack = new Stack<MessageProcessingState>();
@@ -67,7 +67,12 @@ namespace Fudge.Encodings
         public FudgeEncodedStreamReader(FudgeContext fudgeContext, BinaryReader reader)
             : this(fudgeContext)
         {
-            Reset(reader);
+            if (reader == null)
+            {
+                throw new ArgumentNullException("reader", "Must provide a BinaryReader to consume data from.");
+            }
+            this.reader = reader;
+            CurrentElement = FudgeStreamElement.NoElement;
         }
 
         /// <summary>
@@ -76,62 +81,8 @@ namespace Fudge.Encodings
         /// <param name="fudgeContext"><see cref="FudgeContext"/> to use for messages read from the stream.</param>
         /// <param name="stream"><see cref="Stream"/> to read the binary data from.</param>
         public FudgeEncodedStreamReader(FudgeContext fudgeContext, Stream stream)
-            : this(fudgeContext)
+            : this(fudgeContext, new FudgeBinaryReader(stream))
         {
-            Reset(stream);
-        }
-
-        /// <summary>
-        /// Gets the <see cref="BinaryReader"/> used by this <see cref="FudgeEncodedStreamReader"/>.
-        /// </summary>
-        protected BinaryReader Reader
-        {
-            get
-            {
-                return reader;
-            }
-        }
-
-        /**
-         * Reset the state of this parser for a new message.
-         * This method is primarily designed so that instances can be pooled to minimize
-         * object creation in performance sensitive code.
-         * 
-         * @param dataInput
-         */
-        public void Reset(BinaryReader reader)
-        {
-            if (reader == null)
-            {
-                throw new ArgumentNullException("reader", "Must provide a DataInput to consume data from.");
-            }
-            this.reader = reader;
-            CurrentElement = FudgeStreamElement.NoElement;
-            processingStack.Clear();
-
-            processingDirectives = 0;
-            schemaVersion = 0;
-            taxonomyId = 0;
-            envelopeSize = 0;
-
-            FieldType = null;
-            FieldOrdinal = null;
-            FieldName = null;
-            FieldValue = null;
-            eof = false;
-        }
-
-        /// <summary>
-        /// Resets the <see cref="FudgeEncodedStreamReader"/> to use a new input stream.
-        /// </summary>
-        /// <param name="inputStream"><see cref="Stream"/> providing the binary data.</param>
-        public void Reset(Stream inputStream)
-        {
-            if (inputStream == null)
-            {
-                throw new ArgumentNullException("inputStream", "Must provide a Stream to consume data from.");
-            }
-            Reset(new FudgeBinaryReader(inputStream));
         }
 
         /// <summary>
@@ -207,8 +158,8 @@ namespace Fudge.Encodings
          */
         protected void ConsumeFieldData() //throws IOException
         {
-            sbyte fieldPrefix = Reader.ReadSByte();
-            int typeId = Reader.ReadByte();
+            sbyte fieldPrefix = reader.ReadSByte();
+            int typeId = reader.ReadByte();
             int nRead = 2;
             bool fixedWidth = FudgeFieldPrefixCodec.IsFixedWidth(fieldPrefix);
             bool hasOrdinal = FudgeFieldPrefixCodec.HasOrdinal(fieldPrefix);
@@ -217,16 +168,16 @@ namespace Fudge.Encodings
             int? ordinal = null;
             if (hasOrdinal)
             {
-                ordinal = Reader.ReadInt16();
+                ordinal = reader.ReadInt16();
                 nRead += 2;
             }
 
             string name = null;
             if (hasName)
             {
-                int nameSize = Reader.ReadByte();
+                int nameSize = reader.ReadByte();
                 nRead++;
-                name = StringFieldType.ReadString(Reader, nameSize);
+                name = StringFieldType.ReadString(reader, nameSize);
                 nRead += nameSize;
             }
             else if (ordinal != null)
@@ -254,9 +205,9 @@ namespace Fudge.Encodings
                 switch (varSizeBytes)
                 {
                     case 0: varSize = 0; break;
-                    case 1: varSize = Reader.ReadByte(); nRead += 1; break;
-                    case 2: varSize = Reader.ReadInt16(); nRead += 2; break;
-                    case 4: varSize = Reader.ReadInt32(); nRead += 4; break;
+                    case 1: varSize = reader.ReadByte(); nRead += 1; break;
+                    case 2: varSize = reader.ReadInt16(); nRead += 2; break;
+                    case 4: varSize = reader.ReadInt32(); nRead += 4; break;
                     default:
                         throw new FudgeRuntimeException("Illegal number of bytes indicated for variable width encoding: " + varSizeBytes);
                 }
@@ -279,7 +230,7 @@ namespace Fudge.Encodings
             else
             {
                 CurrentElement = FudgeStreamElement.SimpleField;
-                FieldValue = ReadFieldValue(Reader, FieldType, varSize);
+                FieldValue = ReadFieldValue(reader, FieldType, varSize);
                 if (fixedWidth)
                 {
                     currMsgProcessingState.Consumed += type.FixedSize;
@@ -325,7 +276,7 @@ namespace Fudge.Encodings
         {
             try
             {
-                byte result = Reader.ReadByte();
+                byte result = reader.ReadByte();
                 return result;
             }
             catch (EndOfStreamException)
@@ -365,9 +316,9 @@ namespace Fudge.Encodings
                     return;
                 }
             }
-            schemaVersion = Reader.ReadByte();
-            taxonomyId = Reader.ReadInt16();
-            envelopeSize = Reader.ReadInt32();
+            schemaVersion = reader.ReadByte();
+            taxonomyId = reader.ReadInt16();
+            envelopeSize = reader.ReadInt32();
             if (FudgeContext.TaxonomyResolver != null)
             {
                 IFudgeTaxonomy taxonomy = FudgeContext.TaxonomyResolver.ResolveTaxonomy(taxonomyId);

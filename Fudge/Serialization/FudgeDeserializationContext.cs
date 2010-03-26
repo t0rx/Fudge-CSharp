@@ -37,10 +37,8 @@ namespace Fudge.Serialization
         private readonly FudgeContext context;
         private readonly SerializationTypeMap typeMap;
         private readonly IFudgeStreamReader reader;
-        private readonly FudgeMsgStreamWriter msgWriter;
-        private readonly FudgeStreamPipe pipe;
         private readonly List<MsgAndObj> objectList;        // Holds messages and the objects they've deserialized into (for use with references)
-        private readonly Dictionary<IFudgeFieldContainer, int> msgToIndexMap = new Dictionary<IFudgeFieldContainer, int>();
+        private readonly ObjectIDGenerator msgToIndexMap = new ObjectIDGenerator();     // Note that this starts at one rather than zero
         private readonly Stack<State> stack;
         private readonly IFudgeTypeMappingStrategy typeMappingStrategy;
 
@@ -49,8 +47,6 @@ namespace Fudge.Serialization
             this.context = context;
             this.typeMap = typeMap;
             this.reader = reader;
-            this.msgWriter = new FudgeMsgStreamWriter(context);
-            this.pipe = new FudgeStreamPipe(reader, msgWriter);
             this.objectList = new List<MsgAndObj>();
             this.stack = new Stack<State>();
             this.typeMappingStrategy = typeMappingStrategy;
@@ -59,10 +55,7 @@ namespace Fudge.Serialization
         public object DeserializeGraph()
         {
             // We simply return the first object
-            pipe.ProcessOne();
-            var msg = msgWriter.DequeueMessage();
-
-            WalkMessage(msg);
+            LoadMessage();
 
             object result = GetFromRef(0, null);
 
@@ -93,7 +86,9 @@ namespace Fudge.Serialization
             {
                 // SubMsg
                 var subMsg = (FudgeMsg)field.Value;
-                int refId = msgToIndexMap[subMsg];
+                bool firstTime;
+                int refId = (int)msgToIndexMap.GetId(subMsg, out firstTime) - 1;
+                Debug.Assert(!firstTime);
                 Debug.Assert(objectList[refId].Msg == subMsg);
 
                 return GetFromRef(refId, type);             // It is possible that we've already deserialized this, so we call GetFromRef rather than just processing the message
@@ -134,24 +129,51 @@ namespace Fudge.Serialization
 
         #endregion
 
-        /// <summary>
-        /// Finds all the sub-messages in advance so we know their indices and can deserialize out of order if needed
-        /// </summary>
-        private void WalkMessage(FudgeMsg msg)
+        private void LoadMessage()
         {
-            // REVIEW 2010-03-06 t0rx -- This would be more efficient if done at the same time as streaming in rather than separately
-            MsgAndObj msgAndObj = new MsgAndObj();
-            msgAndObj.Msg = msg;
-            int index = objectList.Count;
-            objectList.Add(msgAndObj);
-            msgToIndexMap[msg] = index;
-            foreach (var field in msg)
+            if (reader.MoveNext() != FudgeStreamElement.MessageStart)
             {
-                if (field.Type == FudgeMsgFieldType.Instance)
+                throw new SerializationException("No message start found in stream");
+            }
+
+            ProcessMessage();
+        }
+
+        /// <summary>
+        /// Loads the message from the stream, at the same time remembering the indices of the
+        /// submessage for use in references
+        /// </summary>
+        /// <returns></returns>
+        private FudgeMsg ProcessMessage()
+        {
+            var message = context.NewMessage();
+            MsgAndObj msgAndObj = new MsgAndObj { Msg = message };
+            bool firstTime;
+            int index = (int)msgToIndexMap.GetId(message, out firstTime) - 1;
+            Debug.Assert(index == objectList.Count);
+            objectList.Add(msgAndObj);
+
+            while (reader.HasNext)
+            {
+                switch (reader.MoveNext())
                 {
-                    WalkMessage((FudgeMsg)field.Value);
+                    case FudgeStreamElement.MessageStart:
+                        throw new SerializationException("Unexpected message start in stream");
+                    case FudgeStreamElement.SubmessageFieldEnd:
+                    case FudgeStreamElement.MessageEnd:
+                        return message;                 // We're done now
+                    case FudgeStreamElement.SimpleField:
+                        message.Add(reader.FieldName, reader.FieldOrdinal, reader.FieldType, reader.FieldValue);
+                        break;
+                    case FudgeStreamElement.SubmessageFieldStart:
+                        message.Add(reader.FieldName, reader.FieldOrdinal, FudgeMsgFieldType.Instance, ProcessMessage());
+                        break;
+                    default:
+                        break;      // Unknown
                 }
             }
+
+            throw new SerializationException("Premature end of stream encountered");
         }
 
         /// <summary>
@@ -273,29 +295,19 @@ namespace Fudge.Serialization
             return objectType;
         }
 
-        private sealed class State
+        private struct State
         {
-            private readonly FudgeMsg msg;
-            private readonly int refId;
+            public readonly FudgeMsg Msg;
+            public readonly int RefId;
 
             public State(FudgeMsg msg, int refId)
             {
-                this.msg = msg;
-                this.refId = refId;
-            }
-
-            public FudgeMsg Msg
-            {
-                get { return msg; }
-            }
-
-            public int RefId
-            {
-                get { return refId; }
+                this.Msg = msg;
+                this.RefId = refId;
             }
         }
 
-        private class MsgAndObj
+        private sealed class MsgAndObj
         {
             public FudgeMsg Msg;
             public object Obj;

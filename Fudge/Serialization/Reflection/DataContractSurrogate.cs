@@ -32,7 +32,7 @@ namespace Fudge.Serialization.Reflection
     {
         private readonly FudgeContext context;
         private readonly Type type;
-        private readonly PropertyBasedSerializationSurrogate.PropertySerializerMixin helper;
+        private readonly MemberSerializerMixin memberSerializer;
 
         /// <summary>
         /// Constructs a new instance for a specific type
@@ -57,7 +57,9 @@ namespace Fudge.Serialization.Reflection
                              where prop.GetCustomAttribute<DataMemberAttribute>() != null
                              select prop;
 
-            this.helper = new PropertyBasedSerializationSurrogate.PropertySerializerMixin(context, typeData, properties, new DotNetSerializableSurrogate.BeforeAfterMethodMixin(context, typeData));
+            var type = typeData.Type;       // So the closure in the lambda below is as tight as possible
+            var beforeAfterMixin = new BeforeAfterSerializationMixin(context, typeData);
+            this.memberSerializer = new MemberSerializerMixin(context, typeData, properties, beforeAfterMixin, () => FormatterServices.GetUninitializedObject(type));
         }
 
         /// <summary>
@@ -76,13 +78,13 @@ namespace Fudge.Serialization.Reflection
         /// <inheritdoc/>
         public void Serialize(object obj, IAppendingFudgeFieldContainer msg, IFudgeSerializer serializer)
         {
-            helper.Serialize(obj, msg, serializer);
+            memberSerializer.Serialize(obj, msg, serializer);
         }
 
         /// <inheritdoc/>
         public object Deserialize(IFudgeFieldContainer msg, IFudgeDeserializer deserializer)
         {
-            return helper.CreateAndDeserialize(msg, deserializer);
+            return memberSerializer.Deserialize(msg, deserializer);
         }
 
         #endregion

@@ -199,7 +199,7 @@ namespace Fudge
         /// </summary>
         /// <param name="f">a FudgeMsgField object</param>
         /// <returns>a IFudgeField object</returns>
-        public static IFudgeField toIFudgeField(FudgeMsgField f)
+        public static IFudgeField ToIFudgeField(FudgeMsgField f)
         {
             return (IFudgeField)f;
         }

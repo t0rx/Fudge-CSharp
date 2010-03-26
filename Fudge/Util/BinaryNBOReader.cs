@@ -147,13 +147,14 @@ namespace Fudge.Util
             // BinaryReader.FillBuffer is accessible but the buffer isn't, so we have to do it ourselves
             int offset = 0;
             int num2 = 0;
-            if (BaseStream == null)
+            var stream = BaseStream;
+            if (stream == null)
             {
                 throw new ObjectDisposedException("File closed");
             }
             if (numBytes == 1)
             {
-                num2 = BaseStream.ReadByte();
+                num2 = stream.ReadByte();
                 if (num2 == -1)
                 {
                     throw new EndOfStreamException("Read beyond end of stream");
@@ -164,7 +165,7 @@ namespace Fudge.Util
             {
                 do
                 {
-                    num2 = BaseStream.Read(buffer, offset, numBytes - offset);
+                    num2 = stream.Read(buffer, offset, numBytes - offset);
                     if (num2 == 0)
                     {
                         throw new EndOfStreamException("Read beyond end of stream");

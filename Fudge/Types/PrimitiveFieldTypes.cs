@@ -37,7 +37,7 @@ namespace Fudge.Types
         /// <summary>
         /// A type definition for 8-bit byte values.
         /// </summary>
-        public static readonly FudgeFieldType<sbyte> SByteType = new FudgeFieldType<sbyte>(FudgeTypeDictionary.SBYTE_TYPE_ID, false, 1, (sbyte i, ref FudgeFieldType t) => MinimizeIntegers(i, ref t));
+        public static readonly FudgeFieldType<sbyte> SByteType = new FudgeFieldType<sbyte>(FudgeTypeDictionary.SBYTE_TYPE_ID, false, 1);
 
         /// <summary>
         /// A type definition for signed 16-bit integers.
@@ -47,12 +47,12 @@ namespace Fudge.Types
         /// <summary>
         /// A type definition for signed 32-bit integers.
         /// </summary>
-        public static readonly FudgeFieldType<int> IntType = new FudgeFieldType<int>(FudgeTypeDictionary.INT_TYPE_ID, false, 4, (int i, ref FudgeFieldType t) => MinimizeIntegers(i, ref t));
+        public static readonly FudgeFieldType<int> IntType = new FudgeFieldType<int>(FudgeTypeDictionary.INT_TYPE_ID, false, 4, MinimizeIntegers);
 
         /// <summary>
         /// A type definition for signed 64-bit integers.
         /// </summary>
-        public static readonly FudgeFieldType<long> LongType = new FudgeFieldType<long>(FudgeTypeDictionary.LONG_TYPE_ID, false, 8, (long i, ref FudgeFieldType t) => MinimizeIntegers(i, ref t));
+        public static readonly FudgeFieldType<long> LongType = new FudgeFieldType<long>(FudgeTypeDictionary.LONG_TYPE_ID, false, 8, MinimizeIntegers);
 
         /// <summary>
         /// A type definition for single precision (32-bit) floating point values.
@@ -66,6 +66,12 @@ namespace Fudge.Types
 
         #region Minimizations
 
+        private static object MinimizeIntegers(int value, ref FudgeFieldType type)
+        {
+            return MinimizeIntegers((long)value, ref type);
+        }
+
+            
         /// <summary>
         /// Delegate for reducing integers to the smallest encoding available.
         /// </summary>
