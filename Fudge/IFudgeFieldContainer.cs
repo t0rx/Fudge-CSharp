@@ -85,6 +85,20 @@ namespace Fudge
         IFudgeField GetByName(string name);
 
         /// <summary>
+        /// Tests whether a field with a given name exists.
+        /// </summary>
+        /// <param name="name">Name of field to test.</param>
+        /// <returns><c>true</c> if at least one field with the given name exists.</returns>
+        bool HasField(string name);
+
+        /// <summary>
+        /// Tests whether a field with a given ordinal exists.
+        /// </summary>
+        /// <param name="ordinal">Ordinal of field to test.</param>
+        /// <returns><c>true</c> if at least one field with the given ordinal exists.</returns>
+        bool HasField(int ordinal);
+
+        /// <summary>
         /// Returns the value of the field that would be returned by <c>GetByName</c>, or null if there is no matching field.
         /// </summary>
         /// <param name="name">field name</param>

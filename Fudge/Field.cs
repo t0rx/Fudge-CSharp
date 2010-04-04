@@ -188,6 +188,16 @@ namespace Fudge
                 throw new NotSupportedException();
             }
 
+            public bool HasField(string name)
+            {
+                throw new NotSupportedException();
+            }
+
+            public bool HasField(int ordinal)
+            {
+                throw new NotSupportedException();
+            }
+
             public object GetValue(string name)
             {
                 throw new NotSupportedException();

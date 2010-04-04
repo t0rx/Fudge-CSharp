@@ -89,8 +89,10 @@ namespace Fudge
         public FudgeMsg(FudgeContext context, params IFudgeField[] fields)
             : this(context)
         {
-            foreach (var field in fields)
+            int nFields = fields.Length;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 Add(field);
             }
         }
@@ -229,8 +231,10 @@ namespace Fudge
         {
             // If only there was a set implementation...
             var dict = new Dictionary<string, bool>();
-            foreach (var field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (field.Name != null)
                 {
                     dict[field.Name] = true;
@@ -260,8 +264,10 @@ namespace Fudge
         public IList<IFudgeField> GetAllByOrdinal(int ordinal)
         {
             List<IFudgeField> result = new List<IFudgeField>();
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (ordinal == field.Ordinal)
                 {
                     result.Add(field);
@@ -273,8 +279,10 @@ namespace Fudge
         /// <inheritdoc />
         public IFudgeField GetByOrdinal(int ordinal)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (ordinal == field.Ordinal)
                 {
                     return field;
@@ -287,8 +295,10 @@ namespace Fudge
         public IList<IFudgeField> GetAllByName(string name)
         {
             List<IFudgeField> results = new List<IFudgeField>();
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (name == field.Name)
                 {
                     results.Add(field);
@@ -300,8 +310,10 @@ namespace Fudge
         /// <inheritdoc />
         public IFudgeField GetByName(string name)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (name == field.Name)
                 {
                     return field;
@@ -310,11 +322,25 @@ namespace Fudge
             return null;
         }
 
+        /// <inheritdoc/>
+        public bool HasField(string name)
+        {
+            return (GetByName(name) != null);
+        }
+
+        /// <inheritdoc/>
+        public bool HasField(int ordinal)
+        {
+            return (GetByOrdinal(ordinal) != null);
+        }
+
         /// <inheritdoc />
         public virtual object GetValue(string name)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (name == field.Name)
                 {
                     return field.Value;
@@ -375,8 +401,10 @@ namespace Fudge
         /// <inheritdoc />
         public virtual object GetValue(int ordinal)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (ordinal == field.Ordinal)
                 {
                     return field.Value;
@@ -699,8 +727,10 @@ namespace Fudge
         public override int ComputeSize(IFudgeTaxonomy taxonomy)
         {
             int size = 0;
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 size += field.GetSize(taxonomy);
             }
             return size;
@@ -714,8 +744,10 @@ namespace Fudge
         /// <returns>the matching field, or null if none is found</returns>
         protected object GetFirstTypedValue(string fieldName, int typeId)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if ((fieldName == field.Name)
                     && (field.Type.TypeId == typeId))
                 {
@@ -733,8 +765,10 @@ namespace Fudge
         /// <returns>matching field, or null if none found</returns>
         protected object GetFirstTypedValue(int ordinal, int typeId)
         {
-            foreach (FudgeMsgField field in fields)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (field.Ordinal == null)
                     continue;
 
@@ -785,9 +819,11 @@ namespace Fudge
         /// <inheritdoc />
         public IEnumerator<IFudgeField> GetEnumerator()
         {
-            var copy = new List<FudgeMsgField>(fields);
-            foreach (object field in copy)
+            var copy = fields.ToArray();
+            int nFields = copy.Length;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = copy[i];
                 yield return (IFudgeField)field;
             }
         }
@@ -810,8 +846,10 @@ namespace Fudge
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("FudgeMsg[");
-            foreach (var field in this)
+            int nFields = fields.Count;
+            for (int i = 0; i < nFields; i++)
             {
+                var field = fields[i];
                 if (field.Ordinal != null)
                 {
                     sb.Append(field.Ordinal);

@@ -427,5 +427,18 @@ namespace Fudge.Tests.Unit
             Assert.Null(msg.GetMessage("No Such Field"));
             Assert.True(msg.GetMessage("sub1") is IFudgeFieldContainer);
         }
+
+        [Fact]
+        public void HasField_FRN82()
+        {
+            var msg = new FudgeMsg();
+            msg.Add("foo", 3);
+            msg.Add(17, "bar");
+
+            Assert.True(msg.HasField("foo"));
+            Assert.False(msg.HasField("bar"));
+            Assert.True(msg.HasField(17));
+            Assert.False(msg.HasField(3));
+        }
     }
 }
