@@ -69,7 +69,7 @@ namespace Fudge.Tests.Perf
                 serializer.Serialize(writer, obj);
                 stream.Flush();
                 stream.Position = 0;
-                var obj2 = serializer.Deserialize(reader);
+                var obj2 = serializer.Deserialize(reader, null);
             }
             stopWatch.Stop();
             double speed = (double)Stopwatch.Frequency * nCycles / stopWatch.ElapsedTicks;

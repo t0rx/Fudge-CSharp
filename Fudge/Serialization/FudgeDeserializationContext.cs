@@ -52,12 +52,12 @@ namespace Fudge.Serialization
             this.typeMappingStrategy = typeMappingStrategy;
         }
 
-        public object DeserializeGraph()
+        public object DeserializeGraph(Type expectedType)
         {
             // We simply return the first object
             LoadMessage();
 
-            object result = GetFromRef(0, null);
+            object result = GetFromRef(0, expectedType);
 
             return result;
         }

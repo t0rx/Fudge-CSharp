@@ -50,10 +50,10 @@ namespace Fudge.Tests.Unit.Serialization
             // Reset the stream and deserialize a new object from it
             stream.Position = 0;
             var streamReader = new FudgeEncodedStreamReader(context, stream);
-            var range2 = (TemperatureRange)serializer.Deserialize(streamReader);
+            var range2 = serializer.Deserialize<TemperatureRange>(streamReader);
 
             // Just check a value matches
-            Debug.Assert(range2.Average == 19.6);
+            Assert.Equal(19.6, range2.Average);
         }
 
 
@@ -268,6 +268,19 @@ namespace Fudge.Tests.Unit.Serialization
             var obj2 = (List<int>)serializer.Deserialize(msg);
             Assert.NotSame(obj1, obj2);
             Assert.Equal(obj1, obj2);
+        }
+
+        [Fact]
+        public void DeserializingASimpleMessage_FRN84()
+        {
+            var msg = context.NewMessage(new Field("High", 2.3),
+                                         new Field("Low", 1.4),
+                                         new Field("Average", 1.8)
+                                         );
+
+            var serializer = new FudgeSerializer(context);
+            var obj2 = serializer.Deserialize<TemperatureRange>(msg);
+            Assert.Equal(1.4, obj2.Low);
         }
 
         public class TemperatureRange
