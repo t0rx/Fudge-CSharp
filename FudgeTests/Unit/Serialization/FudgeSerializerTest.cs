@@ -67,7 +67,7 @@ namespace Fudge.Tests.Unit.Serialization
             var address = new Explicit.Address("Our House", "In the middle of our street", "MD1");
             var msg = serializer.SerializeToMsg(address);
 
-            var address2 = (Explicit.Address)serializer.Deserialize(msg);
+            var address2 = serializer.Deserialize<Explicit.Address>(msg);
 
             Assert.Equal(address.Line1, address2.Line1);
             Assert.Equal(address.Line2, address2.Line2);
@@ -84,7 +84,7 @@ namespace Fudge.Tests.Unit.Serialization
             var tick = new Explicit.Tick { Ticker = "FOO", Bid = 12.3, Offer = 12.9 };
             var msg = serializer.SerializeToMsg(tick);
 
-            var tick2 = (Explicit.Tick)serializer.Deserialize(msg);
+            var tick2 = serializer.Deserialize<Explicit.Tick>(msg);
 
             Assert.Equal(tick.Ticker, tick2.Ticker);
             Assert.Equal(tick.Bid, tick2.Bid);
@@ -102,7 +102,7 @@ namespace Fudge.Tests.Unit.Serialization
             var person = new Explicit.Person { Name = "Bob", MainAddress = new Explicit.Address("Foo", "Bar", null) };
             var msg = serializer.SerializeToMsg(person);
 
-            var person2 = (Explicit.Person)serializer.Deserialize(msg);
+            var person2 = serializer.Deserialize<Explicit.Person>(msg);
             Assert.NotSame(person.MainAddress, person2.MainAddress);
             Assert.Equal(person.MainAddress.Line1, person2.MainAddress.Line1);
         }
@@ -121,7 +121,7 @@ namespace Fudge.Tests.Unit.Serialization
 
             var msg = serializer.SerializeToMsg(bob);
 
-            var bob2 = (Explicit.Sibling)serializer.Deserialize(msg);
+            var bob2 = serializer.Deserialize<Explicit.Sibling>(msg);
             Assert.NotSame(bob, bob2);
             Assert.Equal(1, bob2.Siblings.Count);
             Assert.NotSame(shirley, bob2.Siblings[0]);
@@ -143,7 +143,7 @@ namespace Fudge.Tests.Unit.Serialization
 
             var msg = serializer.SerializeToMsg(bob);
 
-            var bob2 = (Explicit.Sibling)serializer.Deserialize(msg);
+            var bob2 = serializer.Deserialize<Explicit.Sibling>(msg);
             Assert.NotSame(bob, bob2);
             Assert.Equal(1, bob2.Siblings.Count);
             var shirley2 = (Explicit.Sibling)bob2.Siblings[0];
@@ -175,7 +175,7 @@ namespace Fudge.Tests.Unit.Serialization
             var msg = context.NewMessage(new Field(0, "Bibble"),
                                          new Field(0, "Fudge.Tests.Unit.Serialization.Explicit+Sibling"),
                                          new Field("name", "Bob"));
-            var bob = (Explicit.Sibling)serializer.Deserialize(msg);
+            var bob = serializer.Deserialize<Explicit.Sibling>(msg);
             Assert.Equal("Bob", bob.Name);
         }
 
@@ -212,7 +212,7 @@ namespace Fudge.Tests.Unit.Serialization
             parent.Out2ForcedIn = parent.Out2;
 
             var msg = serializer.SerializeToMsg(parent);
-            var parent2 = (InlineParent)serializer.Deserialize(msg);
+            var parent2 = serializer.Deserialize<InlineParent>(msg);
 
             Assert.Null(parent2.In1);
             Assert.NotNull(parent2.In2);
@@ -237,13 +237,13 @@ namespace Fudge.Tests.Unit.Serialization
             var serializer = new FudgeSerializer(context);
             var msg = serializer.SerializeToMsg(obj1);
 
-            var result = (ClassWithMessageIn)serializer.Deserialize(msg);
+            var result = serializer.Deserialize<ClassWithMessageIn>(msg);
             Assert.NotSame(result, result.Other);
             Assert.Same(result, result.Other.Other);
         }
 
         [Fact]
-        public void ObjectIdentityNotEquals_FRN65() 
+        public void ObjectIdentityNotEquals_FRN65()
         {
             // Using GetHashCode and Equals is not good enough for testing object identity
             // FRN65Class always returns true for Equals and a constant for GetHashCode
@@ -252,7 +252,7 @@ namespace Fudge.Tests.Unit.Serialization
             var serializer = new FudgeSerializer(context);
             var msg = serializer.SerializeToMsg(obj1);
 
-            var obj2 = (FRN65Class)serializer.Deserialize(msg);
+            var obj2 = serializer.Deserialize<FRN65Class>(msg);
 
             Assert.NotSame(obj2, obj2.Other);
         }
@@ -260,12 +260,12 @@ namespace Fudge.Tests.Unit.Serialization
         [Fact]
         public void ListOfValueTypesShouldntCrash_FRN72()
         {
-            var obj1 = new List<int> (new int[] {1, 2, 3, 4});
+            var obj1 = new List<int>(new int[] { 1, 2, 3, 4 });
 
             var serializer = new FudgeSerializer(context);
             var msg = serializer.SerializeToMsg(obj1);
 
-            var obj2 = (List<int>)serializer.Deserialize(msg);
+            var obj2 = serializer.Deserialize<List<int>>(msg);
             Assert.NotSame(obj1, obj2);
             Assert.Equal(obj1, obj2);
         }

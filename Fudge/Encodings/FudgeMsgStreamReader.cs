@@ -25,7 +25,7 @@ using Fudge.Types;
 namespace Fudge.Encodings
 {
     /// <summary>
-    /// <c>FudgeMsgStreamReader</c> allows a <see cref="FudgeMsg"/> to be read as if it were a stream source of data.
+    /// <c>FudgeMsgStreamReader</c> allows a Fudge message (or any <see cref="IFudgeFieldContainer"/>) to be read as if it were a stream source of data.
     /// </summary>
     public class FudgeMsgStreamReader : IFudgeStreamReader
     {
@@ -34,25 +34,25 @@ namespace Fudge.Encodings
         private State currentState;
         private FudgeStreamElement element = FudgeStreamElement.NoElement;
         private IFudgeField field;
-        private IEnumerator<FudgeMsg> messageSource;
-        private FudgeMsg nextMessage;
+        private IEnumerator<IFudgeFieldContainer> messageSource;
+        private IFudgeFieldContainer nextMessage;
 
         /// <summary>
-        /// Constructs a new <see cref="FudgeMsgStreamReader"/> using a given <see cref="FudgeMsg"/> for data.
+        /// Constructs a new <see cref="FudgeMsgStreamReader"/> using a given <see cref="IFudgeFieldContainer"/> for data.
         /// </summary>
         /// <param name="context">Context to control behaviours.</param>
-        /// <param name="msg"><see cref="FudgeMsg"/> to provide as a stream.</param>
-        public FudgeMsgStreamReader(FudgeContext context, FudgeMsg msg)
-            : this(context, new FudgeMsg[] { msg })
+        /// <param name="msg"><see cref="IFudgeFieldContainer"/> to provide as a stream.</param>
+        public FudgeMsgStreamReader(FudgeContext context, IFudgeFieldContainer msg)
+            : this(context, new IFudgeFieldContainer[] { msg })
         {
         }
 
         /// <summary>
-        /// Constructs a new <see cref="FudgeMsgStreamReader"/> using a set of <see cref="FudgeMsg"/>s for data.
+        /// Constructs a new <see cref="FudgeMsgStreamReader"/> using a set of <see cref="IFudgeFieldContainer"/>s for data.
         /// </summary>
         /// <param name="context">Context to control behaviours.</param>
-        /// <param name="messages">Set <see cref="FudgeMsg"/>s to provide as a stream.</param>
-        public FudgeMsgStreamReader(FudgeContext context, IEnumerable<FudgeMsg> messages)
+        /// <param name="messages">Set <see cref="IFudgeFieldContainer"/>s to provide as a stream.</param>
+        public FudgeMsgStreamReader(FudgeContext context, IEnumerable<IFudgeFieldContainer> messages)
         {
             if (context == null)
                 throw new ArgumentNullException("context");
@@ -117,7 +117,7 @@ namespace Fudge.Encodings
                 if (field.Type == FudgeMsgFieldType.Instance)
                 {
                     stack.Push(currentState);
-                    currentState = new State((FudgeMsg)field.Value);
+                    currentState = new State((IFudgeFieldContainer)field.Value);
                     element = FudgeStreamElement.SubmessageFieldStart;
                 }
                 else
@@ -162,10 +162,10 @@ namespace Fudge.Encodings
 
         private class State
         {
-            public readonly FudgeMsg Msg;
+            public readonly IFudgeFieldContainer Msg;
             public readonly Queue<IFudgeField> Fields;
 
-            public State(FudgeMsg msg)
+            public State(IFudgeFieldContainer msg)
             {
                 Msg = msg;
                 Fields = new Queue<IFudgeField>(msg.GetAllFields());

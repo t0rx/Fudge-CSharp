@@ -142,25 +142,25 @@ namespace Fudge.Serialization
         }
 
         /// <summary>
-        /// Convenience method to deserialize an object graph from a list of messages.
+        /// Convenience method to deserialize an object graph from a message.
         /// </summary>
         /// <param name="msg">Message containing serialized state.</param>
         /// <returns>Deserialized object graph.</returns>
-        public object Deserialize(FudgeMsg msg)
+        public object Deserialize(IFudgeFieldContainer msg)
         {
-            var reader = new FudgeMsgStreamReader(context, new FudgeMsg[] {msg});
+            var reader = new FudgeMsgStreamReader(context, new IFudgeFieldContainer[] { msg });
             return Deserialize(reader, null);
         }
 
         /// <summary>
-        /// Convenience method to deserialize an object graph from a list of messages.
+        /// Convenience method to deserialize an object graph from a message.
         /// </summary>
         /// <typeparam name="T">Type of the object to deserialize (may be supertype).</typeparam>
         /// <param name="msg">Message containing serialized state.</param>
         /// <returns>Deserialized object graph.</returns>
-        public T Deserialize<T>(FudgeMsg msg)
+        public T Deserialize<T>(IFudgeFieldContainer msg)
         {
-            var reader = new FudgeMsgStreamReader(context, new FudgeMsg[] { msg });
+            var reader = new FudgeMsgStreamReader(context, new IFudgeFieldContainer[] { msg });
             return Deserialize<T>(reader);
         }
     }
