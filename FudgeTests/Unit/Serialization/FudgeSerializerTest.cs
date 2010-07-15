@@ -271,6 +271,32 @@ namespace Fudge.Tests.Unit.Serialization
         }
 
         [Fact]
+        public void VariousKindsOfNulls_FRN74()
+        {
+            var indicator = IndicatorType.Instance;
+            var msg = context.NewMessage(new Field("Str", indicator),
+                                         new Field("List", indicator),
+                                         new Field("Array", indicator),
+                                         new Field("Dict", indicator)
+                                         );
+
+            var serializer = new FudgeSerializer(context);
+            var obj = serializer.Deserialize<NullTestClass_FRN74>(msg);
+            Assert.Null(obj.Str);
+            Assert.Null(obj.List);
+            Assert.Null(obj.Array);
+            Assert.Null(obj.Dict);
+        }
+
+        public class NullTestClass_FRN74
+        {
+            public string Str;
+            public List<int> List;
+            public int[] Array;
+            public Dictionary<int, string> Dict;
+        }
+
+        [Fact]
         public void DeserializingASimpleMessage_FRN84()
         {
             var msg = context.NewMessage(new Field("High", 2.3),
