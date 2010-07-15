@@ -26,6 +26,11 @@ namespace Fudge.Encodings
     /// Allows Fudge messages to be output as JSON text.
     /// </summary>
     /// <seealso cref="FudgeJSONStreamReader"/>
+    /// <remarks>
+    /// Details of the encoding may be found at http://wiki.fudgemsg.org/display/FDG/JSON+Fudge+Messages.  Settings controlling the behaviour are specified
+    /// through a <see cref="JSONSettings"/> object, which may be specified at construction, or retrieved from the <see cref="FudgeContext"/> through the
+    /// <see cref="JSONSettings.JSONSettingsProperty"/> context property.
+    /// </remarks>
     public class FudgeJSONStreamWriter : IFudgeStreamWriter
     {
         // Implementation note - as we want to collapse fields of the same name and ordinal
@@ -34,6 +39,8 @@ namespace Fudge.Encodings
         private readonly TextWriter writer;
         private readonly string indentString = "   ";
         private readonly Stack<JSONObject> stack = new Stack<JSONObject>();
+
+        private readonly JSONSettings settings;
 
         /// <summary>
         /// Constructs a new instance.
@@ -49,6 +56,27 @@ namespace Fudge.Encodings
 
             this.context = context;
             this.writer = writer;
+            this.settings = (JSONSettings)context.GetProperty(JSONSettings.JSONSettingsProperty) ?? new JSONSettings();
+        }
+
+        /// <summary>
+        /// Constructs a new instance.
+        /// </summary>
+        /// <param name="context">Context for the writer.</param>
+        /// <param name="settings">Settings for the writer (rather than getting from the context).</param>
+        /// <param name="writer"><see cref="TextWriter"/> to receive the output.</param>
+        public FudgeJSONStreamWriter(FudgeContext context, JSONSettings settings, TextWriter writer)
+        {
+            if (context == null)
+                throw new ArgumentNullException("context");
+            if (writer == null)
+                throw new ArgumentNullException("writer");
+            if (settings == null)
+                throw new ArgumentNullException("settings");
+
+            this.context = context;
+            this.writer = writer;
+            this.settings = settings;
         }
 
         private int Depth
@@ -257,8 +285,25 @@ namespace Fudge.Encodings
 
         private string FormName(string name, int? ordinal)
         {
-            // Need to handle ordinals and missing names - see FRN-69
-            return name;
+            if (name == null)
+            {
+                if (ordinal == null)
+                {
+                    return "";
+                }
+                else
+                {
+                    return ordinal.ToString();
+                }
+            }
+            else if (ordinal == null || settings.PreferFieldNames)
+            {
+                return name;
+            }
+            else
+            {
+                return ordinal.ToString();
+            }
         }
 
         private string EscapeAndWrapString(string s)

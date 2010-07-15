@@ -55,9 +55,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Encodings\EncodingsContextProperties.cs" />
     <Compile Include="Encodings\FudgeEncodedStreamReader.cs" />
     <Compile Include="Encodings\FudgeEncodedStreamWriter.cs" />
     <Compile Include="Encodings\FudgeEncodingExtensions.cs" />
+    <Compile Include="Encodings\JSONSettings.cs" />
     <Compile Include="Encodings\FudgeJSONStreamReader.cs" />
     <Compile Include="Encodings\FudgeJSONStreamWriter.cs" />
     <Compile Include="Encodings\FudgeMsgStreamReader.cs" />

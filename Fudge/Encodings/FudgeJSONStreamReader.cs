@@ -22,6 +22,7 @@ using System.IO;
 using System.Diagnostics;
 using Fudge.Types;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Fudge.Encodings
 {
@@ -38,6 +39,8 @@ namespace Fudge.Encodings
         private Token nextToken;
         private bool done = false;
         private Stack<State> stack = new Stack<State>();
+        private readonly JSONSettings settings;
+        private static readonly Regex ordinalRegEx = new Regex("^-?[0-9]+$", RegexOptions.Compiled);
 
         /// <summary>
         /// Constructs a <see cref="FudgeJSONStreamReader"/> on a given <see cref="TextReader"/>.
@@ -53,6 +56,27 @@ namespace Fudge.Encodings
 
             this.context = context;
             this.reader = reader;
+            this.settings = (JSONSettings)context.GetProperty(JSONSettings.JSONSettingsProperty) ?? new JSONSettings();
+        }
+
+        /// <summary>
+        /// Constructs a <see cref="FudgeJSONStreamReader"/> on a given <see cref="TextReader"/>.
+        /// </summary>
+        /// <param name="context">Context to control behaviours.</param>
+        /// <param name="settings">Settings to override any in the <see cref="FudgeContext"/>.</param>
+        /// <param name="reader"><see cref="TextReader"/> providing the data.</param>
+        public FudgeJSONStreamReader(FudgeContext context, JSONSettings settings, TextReader reader)
+        {
+            if (context == null)
+                throw new ArgumentNullException("context");
+            if (reader == null)
+                throw new ArgumentNullException("reader");
+            if (settings == null)
+                throw new ArgumentNullException("settings");
+
+            this.context = context;
+            this.reader = reader;
+            this.settings = settings;
         }
 
         /// <summary>
@@ -68,6 +92,23 @@ namespace Fudge.Encodings
         /// </example>
         public FudgeJSONStreamReader(FudgeContext context, string text)
             : this(context, new StringReader(text))
+        {
+        }
+
+        /// <summary>
+        /// Constructs a <see cref="FudgeJSONStreamReader"/> using a <c>string</c> for the underlying data.
+        /// </summary>
+        /// <param name="context">Context to control behaviours.</param>
+        /// <param name="settings">Settings to override any in the <see cref="FudgeContext"/>.</param>
+        /// <param name="text">Text containing JSON message.</param>
+        /// <example>This example shows a simple JSON string being converted into a <see cref="FudgeMsg"/> object:
+        /// <code>
+        /// string json = @"{""name"" : ""fred""}";
+        /// FudgeMsg msg = new FudgeJSONStreamReader(json).ReadToMsg();
+        /// </code>
+        /// </example>
+        public FudgeJSONStreamReader(FudgeContext context, JSONSettings settings, string text)
+            : this(context, settings, new StringReader(text))
         {
         }
 
@@ -106,10 +147,11 @@ namespace Fudge.Encodings
                 throw new FudgeParseException("Premature EOF in JSON stream");
 
             var top = stack.Peek();
+            string jsonFieldName;
             if (top.IsInArray)
             {
                 // If we're directly inside an array then the field name was outside
-                FieldName = top.ArrayFieldName;
+                jsonFieldName = top.ArrayFieldName;
             }
             else
             {
@@ -122,7 +164,7 @@ namespace Fudge.Encodings
                 // Not at the end of an object, so must be a field
                 if (token.Type != TokenType.String)
                     throw new FudgeParseException("Expected field name in JSON stream, got " + token + "");
-                FieldName = token.StringData;
+                jsonFieldName = token.StringData;
 
                 token = GetNextToken();
                 if (token != Token.NameSeparator)
@@ -130,7 +172,7 @@ namespace Fudge.Encodings
 
                 token = GetNextToken();
             }
-
+            HandleJSONFieldName(jsonFieldName);
             HandleValue(token);
             return CurrentElement;
         }
@@ -153,6 +195,29 @@ namespace Fudge.Encodings
                 {
                     SkipCommaPostValue(token.ToString());
                 }
+            }
+        }
+
+        private void HandleJSONFieldName(string jsonFieldName)
+        {
+            FieldName = null;
+            FieldOrdinal = null;
+            if (jsonFieldName == "")
+            {
+                // Anonymous field - leave blank
+            }
+            else if (!settings.NumbersAreOrdinals)
+            {
+                FieldName = jsonFieldName;
+            }
+            else if (ordinalRegEx.IsMatch(jsonFieldName))
+            {
+                // It's a number, so do as an ordinal
+                FieldOrdinal = Int32.Parse(jsonFieldName);
+            }
+            else
+            {
+                FieldName = jsonFieldName;
             }
         }
 
@@ -209,7 +274,7 @@ namespace Fudge.Encodings
                 FieldType = PrimitiveFieldTypes.BooleanType;
                 FieldValue = false;
             }
-            else if (token == Token.Null)       // REVIEW 2009-12-18 t0rx -- Is it right to map a JSON null to Indicator?
+            else if (token == Token.Null)
             {
                 FieldType = IndicatorFieldType.Instance;
                 FieldValue = IndicatorType.Instance;
@@ -488,7 +553,8 @@ namespace Fudge.Encodings
                 this.toString = toString;
             }
 
-            public Token(TokenType type, char ch) : this(type, ch.ToString())
+            public Token(TokenType type, char ch)
+                : this(type, ch.ToString())
             {
             }
 

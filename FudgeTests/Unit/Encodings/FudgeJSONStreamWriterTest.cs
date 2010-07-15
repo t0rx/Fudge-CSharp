@@ -184,6 +184,28 @@ namespace Fudge.Tests.Unit.Encodings
         }
 
         [Fact]
+        public void FieldNamesAndOrdinalsLogic_FRN86()
+        {
+            var stringWriter = new StringWriter();
+            var writer = new FudgeJSONStreamWriter(context, stringWriter);
+
+            var msg = context.NewMessage(new Field(1, "ord"),
+                                         new Field("A", "name"),
+                                         new Field("B", 2, "name and ord"),
+                                         new Field(null, null, "empty"));
+            writer.WriteMsg(msg);
+            AssertEqualsNoWhiteSpace("{\"1\" : \"ord\", \"A\" : \"name\", \"B\" : \"name and ord\", \"\" : \"empty\"}", stringWriter.ToString());
+
+            // Now try it preferring ordinals to names
+            var stringWriter2 = new StringWriter();
+            var settings = new JSONSettings() { PreferFieldNames = false };
+            var writer2 = new FudgeJSONStreamWriter(context, settings, stringWriter2);
+            writer2.WriteMsg(msg);
+            AssertEqualsNoWhiteSpace("{\"1\" : \"ord\", \"A\" : \"name\", \"2\" : \"name and ord\", \"\" : \"empty\"}", stringWriter2.ToString());
+        }
+
+        #region Helpers
+        [Fact]
         public void TestEqualsNoWhiteSpaceWorks()
         {
             // Test our test works
@@ -202,5 +224,6 @@ namespace Fudge.Tests.Unit.Encodings
 
             Assert.Equal(a, b);
         }
+        #endregion
     }
 }

@@ -88,7 +88,7 @@ namespace Fudge.Tests.Unit.Encodings
         [Fact]
         public void Arrays()
         {
-            string json = @"{""numbers"" : [ 1, 2, 4], ""submsgs"" : [ { ""a"" : -3 }, { ""b"" : 28 } ] }";
+            string json = @"{""numbers"" : [ 1, 2, 4 ], ""submsgs"" : [ { ""a"" : -3 }, { ""b"" : 28 } ] }";
 
             var msg = new FudgeJSONStreamReader(context, json).ReadMsg();
 
@@ -103,6 +103,21 @@ namespace Fudge.Tests.Unit.Encodings
             Assert.IsType<FudgeMsg>(messages[1].Value);
             var message2 = (FudgeMsg)messages[1].Value;
             Assert.Equal(28, (sbyte)message2.GetInt("b"));
+        }
+
+        [Fact]
+        public void FieldNamesAndOrdinalsLogic_FRN86()
+        {
+            string jsonMixed = @"{""name"" : 1, ""2"" : 2}";
+            string jsonEmpty = @"{"""" : 3}";
+
+            var msg1 = new FudgeJSONStreamReader(context, jsonMixed).ReadMsg();
+            var msg2 = new FudgeJSONStreamReader(context, new JSONSettings { NumbersAreOrdinals = false }, jsonMixed).ReadMsg();
+            var msg3 = new FudgeJSONStreamReader(context, jsonEmpty).ReadMsg();
+
+            Assert.Equal("FudgeMsg[name => 1, 2:  => 2]", msg1.ToString()); // Second went to ordinal because NumbersAreOrdinals is true
+            Assert.Equal("FudgeMsg[name => 1, 2 => 2]", msg2.ToString());   // Both went to names because we set NumbersAreOrdinals to false
+            Assert.Equal("FudgeMsg[ => 3]", msg3.ToString());               // Anonymous field
         }
 
         [Fact]
