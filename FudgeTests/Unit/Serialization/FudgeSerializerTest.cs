@@ -257,6 +257,19 @@ namespace Fudge.Tests.Unit.Serialization
             Assert.NotSame(obj2, obj2.Other);
         }
 
+        [Fact]
+        public void ListOfValueTypesShouldntCrash_FRN72()
+        {
+            var obj1 = new List<int> (new int[] {1, 2, 3, 4});
+
+            var serializer = new FudgeSerializer(context);
+            var msg = serializer.SerializeToMsg(obj1);
+
+            var obj2 = (List<int>)serializer.Deserialize(msg);
+            Assert.NotSame(obj1, obj2);
+            Assert.Equal(obj1, obj2);
+        }
+
         public class TemperatureRange
         {
             public double High { get; set; }

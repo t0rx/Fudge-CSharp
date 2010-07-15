@@ -71,7 +71,7 @@ namespace Fudge.Serialization
         }
 
         /// <inheritdoc/>
-        public T FromField<T>(IFudgeField field) where T : class
+        public T FromField<T>(IFudgeField field)
         {
             return (T)FromField(field, typeof(T));
         }

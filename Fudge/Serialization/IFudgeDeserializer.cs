@@ -40,7 +40,7 @@ namespace Fudge.Serialization
         /// <remarks>
         /// This method allows the deserialiser to be agnostic to whether the object was serialised as a reference or in-place.
         /// </remarks>
-        T FromField<T>(IFudgeField field) where T : class;
+        T FromField<T>(IFudgeField field);
 
         /// <summary>
         /// Deserialises an object from a Fudge field.

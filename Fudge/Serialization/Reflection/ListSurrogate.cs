@@ -88,7 +88,7 @@ namespace Fudge.Serialization.Reflection
             return false;
         }
 
-        private object DeserializeList<T>(IFudgeFieldContainer msg, IFudgeDeserializer deserializer) where T : class
+        private object DeserializeList<T>(IFudgeFieldContainer msg, IFudgeDeserializer deserializer)
         {
             var result = new List<T>(msg.GetNumFields());
             deserializer.Register(msg, result);

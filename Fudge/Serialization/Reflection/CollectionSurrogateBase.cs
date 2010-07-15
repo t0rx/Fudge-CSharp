@@ -116,7 +116,7 @@ namespace Fudge.Serialization.Reflection
         /// <param name="deserializer"></param>
         /// <param name="kind"></param>
         /// <returns></returns>
-        protected T DeserializeField<T>(IFudgeField field, IFudgeDeserializer deserializer, TypeData.TypeKind kind) where T : class
+        protected T DeserializeField<T>(IFudgeField field, IFudgeDeserializer deserializer, TypeData.TypeKind kind)
         {
             switch (kind)
             {
