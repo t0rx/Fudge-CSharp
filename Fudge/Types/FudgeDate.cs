@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Fudge.Types
 {
@@ -381,5 +382,43 @@ namespace Fudge.Types
         }
 
         #endregion
+
+        private static readonly Regex parseRegex = new Regex(@"^(-?\d+)(-\d{2})?(-\d{2})?$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Converts a string in ISO8601/RFC3339 format to a FudgeDate
+        /// </summary>
+        /// <param name="s">String to parse</param>
+        /// <returns><see cref="FudgeDate"/> that the string represents.</returns>
+        public static FudgeDate Parse(string s)
+        {
+            FudgeDateTimePrecision precision;
+            return Parse(s, out precision);
+        }
+
+        internal static FudgeDate Parse(string s, out FudgeDateTimePrecision precision)
+        {
+            precision = FudgeDateTimePrecision.Year;
+
+            Match match = parseRegex.Match(s);
+            if (!match.Success)
+                throw new FormatException("String \"" + s + "\" is not a valid date format");
+
+            int year = 0, month = 1, day = 1;
+            year = int.Parse(match.Groups[1].Value);
+            if (match.Groups[2].Success)
+            {
+                month = int.Parse(match.Groups[2].Value.Substring(1));
+                precision = FudgeDateTimePrecision.Month;
+
+                if (match.Groups[3].Success)
+                {
+                    day = int.Parse(match.Groups[3].Value.Substring(1));
+                    precision = FudgeDateTimePrecision.Day;
+                }
+            }
+
+            return new FudgeDate(year, month, day);
+        }
     }
 }

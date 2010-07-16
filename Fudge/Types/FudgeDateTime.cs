@@ -475,5 +475,36 @@ namespace Fudge.Types
         }
 
         #endregion
+
+        /// <summary>
+        /// Converts a string in ISO8601/RFC3339 format to a FudgeDateTime
+        /// </summary>
+        /// <param name="s">String to parse</param>
+        /// <returns><see cref="FudgeDateTime"/> that the string represents.</returns>
+        public static FudgeDateTime Parse(string s)
+        {
+            int tIndex = s.IndexOf('T');
+
+            if (tIndex == -1)
+            {
+                // No T, so must just be a date
+                FudgeDateTimePrecision precision;
+                var date = FudgeDate.Parse(s, out precision);
+                return new FudgeDateTime(date, FudgeTime.Midnight, precision);
+            }
+
+            if (tIndex == 0 || tIndex == s.Length - 1)
+            {
+                throw new FormatException("String \"" + s + "\" is not a valid datetime format");
+            }
+            else
+            {
+                var date = FudgeDate.Parse(s.Substring(0, tIndex));
+                var time = FudgeTime.Parse(s.Substring(tIndex + 1));
+
+                return new FudgeDateTime(date, time);
+            }
+        }
+
     }
 }

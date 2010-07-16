@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Fudge.Types
 {
@@ -305,5 +306,69 @@ namespace Fudge.Types
         }
 
         #endregion
+
+        private static readonly Regex parseRegex = new Regex(@"^(\d{2})(:\d{2})?(:\d{2})?(\.\d+)?([+\-]\d{2}:\d{2})?$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Converts a string in ISO8601/RFC3339 format to a FudgeTime
+        /// </summary>
+        /// <param name="s">String to parse</param>
+        /// <returns><see cref="FudgeTime"/> that the string represents.</returns>
+        public static FudgeTime Parse(string s)
+        {
+            FudgeDateTimePrecision precision = FudgeDateTimePrecision.Hour;
+
+            Match match = parseRegex.Match(s);
+            if (!match.Success)
+                throw new FormatException("String \"" + s + "\" is not a valid time format");
+
+            int hour = 0, minute = 0, second = 0, nanos = 0;
+            int? tzOffset = null;
+            hour = int.Parse(match.Groups[1].Value);
+            if (match.Groups[2].Success)
+            {
+                minute = int.Parse(match.Groups[2].Value.Substring(1));
+                precision = FudgeDateTimePrecision.Minute;
+
+                if (match.Groups[3].Success)
+                {
+                    second = int.Parse(match.Groups[3].Value.Substring(1));
+                    precision = FudgeDateTimePrecision.Second;
+
+                    if (match.Groups[4].Success)
+                    {
+                        string nanoStr = match.Groups[4].Value.Substring(1);
+                        int originalLen = nanoStr.Length;
+                        if (originalLen > 9)
+                            nanoStr = nanoStr.Substring(0, 9);
+                        else
+                            nanoStr = nanoStr.PadRight(9, '0');
+                        nanos = int.Parse(nanoStr);
+    
+                        if (originalLen >= 9)
+                            precision = FudgeDateTimePrecision.Nanosecond;
+                        else if (originalLen >= 6)
+                            precision = FudgeDateTimePrecision.Microsecond;
+                        else if (originalLen >= 3)
+                            precision = FudgeDateTimePrecision.Millisecond;
+                    }
+                }
+
+                if (match.Groups[5].Success)
+                {
+                    // Got a time-zone
+                    string tzStr = match.Groups[5].Value;
+                    int colonPos = tzStr.IndexOf(":");
+                    int tzHour = int.Parse(tzStr.Substring(0, colonPos));
+                    int tzMin = int.Parse(tzStr.Substring(colonPos + 1));
+                    if (tzHour < 0)
+                        tzMin = -tzMin;
+
+                    tzOffset = tzHour * 60 + tzMin;
+                }
+            }
+
+            return new FudgeTime(hour, minute, second, nanos, tzOffset, precision);
+        }
     }
 }

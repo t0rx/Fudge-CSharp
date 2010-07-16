@@ -188,5 +188,13 @@ namespace Fudge.Tests.Unit.Types
             Assert.Equal("1987-03-04", date.ToType(typeof(string), null));
             Assert.Throws<InvalidCastException>(() => date.ToType(typeof(int), null));
         }
+
+        [Fact]
+        public void Parsing()
+        {
+            Assert.Equal(20100102, FudgeDate.Parse("2010-01-02").RawValue);
+            Assert.Equal(19970401, FudgeDate.Parse("1997-04").RawValue);
+            Assert.Equal(-1230101, FudgeDate.Parse("-123").RawValue);
+        }
     }
 }

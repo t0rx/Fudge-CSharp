@@ -60,5 +60,24 @@ namespace Fudge.Types
             data |= (value.Day & 0x1f);
             output.Write(data);
         }
+
+        /// <inheritdoc/>
+        public override object ConvertValueFrom(object value)
+        {
+            if (value == null)
+                return null;
+
+            Type type = value.GetType();
+            if (type == typeof(string))
+                return FudgeDate.Parse((string)value);
+            else if (type == typeof(DateTime))
+                return new FudgeDate((DateTime)value);
+            else if (type == typeof(FudgeDateTime))
+                return ((FudgeDateTime)value).Date;
+            else if (type == typeof(FudgeDate))
+                return value;
+            else
+                return base.ConvertValueFrom(value);
+        }
     }
 }

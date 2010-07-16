@@ -97,5 +97,20 @@ namespace Fudge.Types
             output.Write(firstFourBytes);
             output.Write(nanos);
         }
+
+        /// <inheritdoc/>
+        public override object ConvertValueFrom(object value)
+        {
+            if (value == null)
+                return null;
+
+            Type type = value.GetType();
+            if (type == typeof(string))
+                return FudgeTime.Parse((string)value);
+            else if (type == typeof(FudgeTime))
+                return value;
+            else
+                return base.ConvertValueFrom(value);
+        }
     }
 }

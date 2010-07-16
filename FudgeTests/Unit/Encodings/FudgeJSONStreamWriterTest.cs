@@ -204,6 +204,30 @@ namespace Fudge.Tests.Unit.Encodings
             AssertEqualsNoWhiteSpace("{\"1\" : \"ord\", \"A\" : \"name\", \"2\" : \"name and ord\", \"\" : \"empty\"}", stringWriter2.ToString());
         }
 
+        [Fact]
+        public void StringRepresentations_FRN89()
+        {
+            var stringWriter = new StringWriter();
+            var writer = new FudgeJSONStreamWriter(context, stringWriter);
+            writer.WriteMsg(StringsTestMsg);
+
+            // Float/double as per IEEE7 54-2008, string escaped as per RFC 3339, dates and times as per RFC 3339.
+            AssertEqualsNoWhiteSpace(StringsTestString, stringWriter.ToString());
+        }
+
+        internal static readonly FudgeMsg StringsTestMsg = new FudgeMsg(new Field("float", 2.375e15f),
+                                                                       new Field("double", 1.234e50),
+                                                                       new Field("string", "abc\\\"de"),
+                                                                       new Field("date", new FudgeDate(20100202)),
+                                                                       new Field("time", new FudgeTime(14, 1, 12, 123456789, 60, FudgeDateTimePrecision.Nanosecond)),
+                                                                       new Field("datetime", new FudgeDateTime(1953, 7, 31, 0, 56, 23, 987654321, -60, FudgeDateTimePrecision.Nanosecond)));
+        internal static readonly string StringsTestString = @"{""float"" : 2.375E+15, 
+                                                               ""double"" : 1.234E+50,
+                                                               ""string"" : ""abc\\\""de"",
+                                                               ""date"" : ""2010-02-02"",
+                                                               ""time"" : ""14:01:12.123456789+01:00"",
+                                                               ""datetime"" : ""1953-07-31T00:56:23.987654321-01:00""}";
+
         #region Helpers
         [Fact]
         public void TestEqualsNoWhiteSpaceWorks()

@@ -177,5 +177,20 @@ namespace Fudge.Tests.Unit.Encodings
             Assert.Equal("fred", writer.DequeueMessage().GetString("name"));
             Assert.Equal(17, writer.DequeueMessage().GetInt("number"));
         }
+
+        [Fact]
+        public void StringRepresentations_FRN89()
+        {
+            string json = FudgeJSONStreamWriterTest.StringsTestString;
+            var reader = new FudgeJSONStreamReader(context, json);
+            FudgeMsg msg = reader.ReadMsg();
+
+            Assert.Equal(2.375e15f, msg.GetFloat("float"));
+            Assert.Equal(1.234e50, msg.GetDouble("double"));
+            Assert.Equal("abc\\\"de", msg.GetString("string"));
+            Assert.Equal(new FudgeDate(20100202), msg.GetValue<FudgeDate>("date"));
+            Assert.Equal(new FudgeTime(14, 1, 12, 123456789, 60, FudgeDateTimePrecision.Nanosecond), msg.GetValue<FudgeTime>("time"));
+            Assert.Equal(new FudgeDateTime(1953, 7, 31, 0, 56, 23, 987654321, -60, FudgeDateTimePrecision.Nanosecond), msg.GetValue<FudgeDateTime>("datetime"));
+        }
     }
 }

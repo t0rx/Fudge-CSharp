@@ -105,5 +105,15 @@ namespace Fudge.Tests.Unit.Types
             Assert.False(dt2.Equals(null));
             Assert.False(dt2.Equals("Fred"));
         }
+
+        [Fact]
+        public void Parsing()
+        {
+            Assert.Equal("-0123", FudgeDateTime.Parse("-0123").ToString());
+            Assert.Equal("1997-04", FudgeDateTime.Parse("1997-04").ToString());
+            Assert.Equal("2010-01-02", FudgeDateTime.Parse("2010-01-02").ToString());
+            Assert.Equal("1998-02-29T12:23:45.678+03:45", FudgeDateTime.Parse("1998-02-29T12:23:45.678+03:45").ToString());
+        }
+
     }
 }

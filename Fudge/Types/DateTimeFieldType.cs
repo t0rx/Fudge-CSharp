@@ -87,5 +87,26 @@ namespace Fudge.Types
             DateFieldType.Instance.WriteValue(output, value.Date);
             TimeFieldType.WriteEncodedTime(output, value.Precision, value.TimeZoneOffset, value.Time.TotalSeconds, value.Nanoseconds);
         }
+
+        /// <inheritdoc/>
+        public override object ConvertValueFrom(object value)
+        {
+            if (value == null)
+                return null;
+
+            Type type = value.GetType();
+            if (type == typeof(string))
+                return FudgeDateTime.Parse((string)value);
+            else if (type == typeof(DateTime))
+                return new FudgeDateTime((DateTime)value);
+            else if (type == typeof(DateTimeOffset))
+                return new FudgeDateTime((DateTimeOffset)value);
+            else if (type == typeof(FudgeDate))
+                return new FudgeDateTime((FudgeDate)value, FudgeTime.Midnight, FudgeDateTimePrecision.Day);
+            else if (type == typeof(FudgeDateTime))
+                return value;
+            else
+                return base.ConvertValueFrom(value);
+        }
     }
 }

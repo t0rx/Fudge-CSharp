@@ -135,5 +135,18 @@ namespace Fudge.Tests.Unit.Types
             Assert.False(new FudgeTime(1, 2, 3, 45789, 60, FudgeDateTimePrecision.Millisecond).Equals(new FudgeTime(1, 2, 3, 45789, 60, FudgeDateTimePrecision.Nanosecond)));
             Assert.False(new FudgeTime(1, 2, 3, 45789, FudgeDateTimePrecision.Nanosecond).Equals(new FudgeTime(1, 2, 3, 45789, 0, FudgeDateTimePrecision.Nanosecond)));
         }
+
+        [Fact]
+        public void Parsing()
+        {
+            Assert.Equal(new FudgeTime(10), FudgeTime.Parse("10"));
+            Assert.Equal(new FudgeTime(10, 15), FudgeTime.Parse("10:15"));
+            Assert.Equal(new FudgeTime(10, 15, 23), FudgeTime.Parse("10:15:23"));
+            Assert.Equal(new FudgeTime(10, 15, 23, 987000000, FudgeDateTimePrecision.Millisecond), FudgeTime.Parse("10:15:23.987"));
+            Assert.Equal(new FudgeTime(10, 15, 23, 987654000, FudgeDateTimePrecision.Microsecond), FudgeTime.Parse("10:15:23.987654"));
+            Assert.Equal(new FudgeTime(10, 15, 23, 987654321, FudgeDateTimePrecision.Nanosecond), FudgeTime.Parse("10:15:23.987654321"));
+            Assert.Equal(new FudgeTime(10, 15, 23, 987654321, -60, FudgeDateTimePrecision.Nanosecond), FudgeTime.Parse("10:15:23.987654321-01:00"));
+            Assert.Equal(new FudgeTime(10, 15, 23, 0, 90, FudgeDateTimePrecision.Second), FudgeTime.Parse("10:15:23+01:30"));
+        }
     }
 }
