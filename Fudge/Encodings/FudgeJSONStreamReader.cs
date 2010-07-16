@@ -36,7 +36,7 @@ namespace Fudge.Encodings
     {
         private readonly FudgeContext context;
         private readonly TextReader reader;
-        private Token nextToken;
+        private Queue<Token> tokenQueue = new Queue<Token>();
         private bool done = false;
         private Stack<State> stack = new Stack<State>();
         private readonly JSONSettings settings;
@@ -141,39 +141,44 @@ namespace Fudge.Encodings
                 return CurrentElement;
             }
 
-            token = GetNextToken();
-
-            if (token == Token.EOF)
-                throw new FudgeParseException("Premature EOF in JSON stream");
-
-            var top = stack.Peek();
-            string jsonFieldName;
-            if (top.IsInArray)
+            while (true)
             {
-                // If we're directly inside an array then the field name was outside
-                jsonFieldName = top.ArrayFieldName;
-            }
-            else
-            {
-                if (token == Token.EndObject)
+                token = GetNextToken();
+
+                if (token == Token.EOF)
+                    throw new FudgeParseException("Premature EOF in JSON stream");
+
+                var top = stack.Peek();
+                string jsonFieldName;
+                if (top.IsInArray)
                 {
-                    HandleObjectEnd(token);
-                    return CurrentElement;
+                    // If we're directly inside an array then the field name was outside
+                    jsonFieldName = top.ArrayFieldName;
                 }
+                else
+                {
+                    if (token == Token.EndObject)
+                    {
+                        HandleObjectEnd(token);
+                        return CurrentElement;
+                    }
 
-                // Not at the end of an object, so must be a field
-                if (token.Type != TokenType.String)
-                    throw new FudgeParseException("Expected field name in JSON stream, got " + token + "");
-                jsonFieldName = token.StringData;
+                    // Not at the end of an object, so must be a field
+                    if (token.Type != TokenType.String)
+                        throw new FudgeParseException("Expected field name in JSON stream, got " + token + "");
+                    jsonFieldName = token.StringData;
 
-                token = GetNextToken();
-                if (token != Token.NameSeparator)
-                    throw new FudgeParseException("Expected ':' in JSON stream for field \"" + FieldName + "\", got " + token + "");
+                    token = GetNextToken();
+                    if (token != Token.NameSeparator)
+                        throw new FudgeParseException("Expected ':' in JSON stream for field \"" + FieldName + "\", got " + token + "");
 
-                token = GetNextToken();
+                    token = GetNextToken();
+                }
+                HandleJSONFieldName(jsonFieldName);
+                bool producedValue = HandleValue(token);        // It's possible that we don't actually come up with a field - e.g. for an emtpy array
+                if (producedValue)
+                    break;
             }
-            HandleJSONFieldName(jsonFieldName);
-            HandleValue(token);
             return CurrentElement;
         }
 
@@ -221,27 +226,133 @@ namespace Fudge.Encodings
             }
         }
 
-        private void HandleValue(Token token)
+        private bool HandleValue(Token token)
         {
             if (token.IsSimpleValue)
             {
                 HandleSimpleValue(token);
                 SkipCommaPostValue(token.ToString());
+                return true;
             }
             else if (token == Token.BeginObject)
             {
                 stack.Push(State.InObject);
                 CurrentElement = FudgeStreamElement.SubmessageFieldStart;
+                return true;
             }
             else if (token == Token.BeginArray)
             {
-                stack.Push(new State(FieldName));
-
-                // Recurse to deal with real value
-                HandleValue(GetNextToken());
+                return HandleArray();
             }
             else
                 throw new FudgeParseException("Unexpected token \"" + token + "\" in JSON stream when looking for a value");
+        }
+
+        private bool HandleArray()
+        {
+            // We have to look ahead to see whether the array should be represented as a primitive array or not
+            var arrayTokens = new List<Token>();
+            var allTokens = new List<Token>();
+            var itemType = TokenType.Error;
+
+            // Keep pulling tokens until we have an inconsistency (therefore repeating field) or the end of the array (therefore consistent)
+            while (true)
+            {
+                Token nextToken = GetNextToken();
+                if (nextToken == Token.EndArray)
+                {
+                    // If we've got this far then we're consistent
+                    SkipCommaPostValue("array");
+                    return HandlePrimitiveArray(arrayTokens, itemType);
+                }
+                if (itemType != TokenType.Error)
+                {
+                    if (nextToken != Token.ValueSeparator)
+                    {
+                        // Got past the first value so it should have been a separator
+                        throw new FudgeParseException("Unexpected token \"" + nextToken + "\" in JSON stream when looking for a value in an array");
+                    }
+                    allTokens.Add(nextToken);
+                    nextToken = GetNextToken();
+                }
+
+                arrayTokens.Add(nextToken);
+                allTokens.Add(nextToken);
+                if (nextToken.Type != TokenType.Double && nextToken.Type != TokenType.Integer && nextToken.Type != TokenType.Long)
+                {
+                    // Can't be a primitive array
+                    break;
+                }
+
+                if (itemType == TokenType.Error)
+                {
+                    // First time around
+                    itemType = nextToken.Type;
+                }
+                else if (nextToken.Type != itemType)
+                {
+                    if (itemType == TokenType.Long && nextToken.Type == TokenType.Integer)
+                    {
+                        // That's OK
+                    }
+                    else if (itemType == TokenType.Integer && nextToken.Type == TokenType.Long)
+                    {
+                        // Upscale
+                        itemType = TokenType.Long;
+                    }
+                    else
+                    {
+                        // Inconsistent
+                        break;
+                    }
+                }
+            }
+
+            // We've got here because it can't be a primitive array, but we've read a number of tokens to get here
+            RequeueTokens(allTokens);
+
+            // Now we can start processing the array as repeating fields
+            stack.Push(new State(FieldName));
+            return HandleValue(GetNextToken());
+        }
+
+        private void RequeueTokens(List<Token> tokens)
+        {
+            // No native way of doing this to a queue, so have to work around
+            tokens.AddRange(tokenQueue);
+            tokenQueue.Clear();
+            foreach (var token in tokens)
+                tokenQueue.Enqueue(token);
+        }
+
+        private bool HandlePrimitiveArray(List<Token> tokens, TokenType type)
+        {
+            if (tokens.Count == 0)
+            {
+                // Empty array - this results in nothing in the Fudge message, so indicate we've not done anything
+                return false;
+            }
+
+            switch (type)
+            {
+                case TokenType.Double:
+                    FieldType = DoubleArrayFieldType.Instance;
+                    FieldValue = tokens.Select(t => t.DoubleData).ToArray();
+                    break;
+                case TokenType.Integer:
+                    FieldType = IntArrayFieldType.Instance;
+                    FieldValue = tokens.Select(t => t.IntData).ToArray();
+                    break;
+                case TokenType.Long:
+                    FieldType = LongArrayFieldType.Instance;
+                    FieldValue = tokens.Select(t => t.LongData).ToArray();
+                    break;
+                default:
+                    // Shouldn't happen
+                    throw new FudgeRuntimeException("Attempt to convert JSON array of " + type + " to primitive array");
+            }
+
+            return true;
         }
 
         private int Depth { get { return stack.Count; } }
@@ -249,39 +360,39 @@ namespace Fudge.Encodings
         private void HandleSimpleValue(Token token)
         {
             CurrentElement = FudgeStreamElement.SimpleField;
-            if (token.Type == TokenType.String)
+            switch (token.Type)
             {
-                FieldType = StringFieldType.Instance;
-                FieldValue = token.StringData;
-            }
-            else if (token.Type == TokenType.Integer)
-            {
-                FieldType = PrimitiveFieldTypes.IntType;
-                FieldValue = token.IntData;
-            }
-            else if (token.Type == TokenType.Double)
-            {
-                FieldType = PrimitiveFieldTypes.DoubleType;
-                FieldValue = token.DoubleData;
-            }
-            else if (token == Token.True)
-            {
-                FieldType = PrimitiveFieldTypes.BooleanType;
-                FieldValue = true;
-            }
-            else if (token == Token.False)
-            {
-                FieldType = PrimitiveFieldTypes.BooleanType;
-                FieldValue = false;
-            }
-            else if (token == Token.Null)
-            {
-                FieldType = IndicatorFieldType.Instance;
-                FieldValue = IndicatorType.Instance;
-            }
-            else
-            {
-                Debug.Assert(false, "Unknown simple value token " + token);
+                case TokenType.String:
+                    FieldType = StringFieldType.Instance;
+                    FieldValue = token.StringData;
+                    break;
+                case TokenType.Integer:
+                    FieldType = PrimitiveFieldTypes.IntType;
+                    FieldValue = token.IntData;
+                    break;
+                case TokenType.Long:
+                    FieldType = PrimitiveFieldTypes.LongType;
+                    FieldValue = token.LongData;
+                    break;
+                case TokenType.Double:
+                    FieldType = PrimitiveFieldTypes.DoubleType;
+                    FieldValue = token.DoubleData;
+                    break;
+                case TokenType.Boolean:
+                    FieldType = PrimitiveFieldTypes.BooleanType;
+                    FieldValue = token.BooleanData;
+                    break;
+                default:
+                    if (token == Token.Null)
+                    {
+                        FieldType = IndicatorFieldType.Instance;
+                        FieldValue = IndicatorType.Instance;
+                    }
+                    else
+                    {
+                        Debug.Assert(false, "Unknown simple value token " + token);
+                    }
+                    break;
             }
         }
 
@@ -317,21 +428,20 @@ namespace Fudge.Encodings
 
         private Token PeekNextToken()
         {
-            if (nextToken == null)
-                nextToken = ParseNextToken();
-            return nextToken;
+            if (tokenQueue.Count == 0)
+            {
+                var nextToken = ParseNextToken();
+                tokenQueue.Enqueue(nextToken);
+            }
+            return tokenQueue.Peek();
         }
 
         private Token GetNextToken()
         {
-            if (nextToken == null)
+            if (tokenQueue.Count == 0)
                 return ParseNextToken();
             else
-            {
-                var result = nextToken;
-                nextToken = null;
-                return result;
-            }
+                return tokenQueue.Dequeue();
         }
 
         private Token ParseNextToken()
@@ -435,11 +545,15 @@ namespace Fudge.Encodings
             {
                 if (isDouble)
                 {
-                    return new Token(TokenType.Double, literal) { DoubleData = double.Parse(literal) };
+                    return new Token(double.Parse(literal), literal);
                 }
                 else
                 {
-                    return new Token(TokenType.Integer, literal) { IntData = int.Parse(literal) };
+                    long val = long.Parse(literal);
+                    if (val >= int.MinValue && val <= int.MaxValue)
+                        return new Token((int)val, literal);
+                    else
+                        return new Token(val, literal);
                 }
             }
             catch (FormatException)
@@ -466,7 +580,7 @@ namespace Fudge.Encodings
                 {
                     case '"':
                         // We're done
-                        return new Token(TokenType.String, sb.ToString()) { StringData = sb.ToString() };
+                        return new Token(sb.ToString());
                     case '\\':
                         {
                             // Escaped char
@@ -526,12 +640,12 @@ namespace Fudge.Encodings
         {
             private readonly string arrayFieldName;
 
-            public State(string arrayFieldName)
+            public State(string arrayFieldName) // We're in an array
             {
                 this.arrayFieldName = arrayFieldName;
             }
 
-            public State()
+            public State()                      // We're not in an array
             {
                 this.arrayFieldName = null;
             }
@@ -546,10 +660,14 @@ namespace Fudge.Encodings
         private class Token
         {
             private readonly string toString;
+            private readonly TokenType type;
+            private readonly string stringData;
+            private readonly double doubleData;
+            private readonly long longData;
 
             public Token(TokenType type, string toString)
             {
-                this.Type = type;
+                this.type = type;
                 this.toString = toString;
             }
 
@@ -558,13 +676,41 @@ namespace Fudge.Encodings
             {
             }
 
-            public TokenType Type { get; private set; }
+            public Token(string val)
+                : this(TokenType.String, val)
+            {
+                stringData = val;
+            }
 
-            public string StringData { get; set; }
+            public Token(double val, string str)
+                : this(TokenType.Double, str)
+            {
+                doubleData = val;
+            }
 
-            public int IntData { get; set; }
+            public Token(long val, string str)
+                : this(TokenType.Long, str)
+            {
+                longData = val;
+            }
 
-            public double DoubleData { get; set; }
+            public Token(int val, string str)
+                : this(TokenType.Integer, str)
+            {
+                longData = val;
+            }
+
+            public TokenType Type { get { return type; } }
+
+            public string StringData { get { return stringData; } }
+
+            public long LongData { get { return longData; } }
+
+            public int IntData { get { return (int)longData; } }
+
+            public double DoubleData { get { return doubleData; } }
+
+            public bool BooleanData { get { return this == True; } }
 
             public bool IsSimpleValue
             {
@@ -572,9 +718,9 @@ namespace Fudge.Encodings
                 {
                     return Type == TokenType.Double ||
                            Type == TokenType.Integer ||
+                           Type == TokenType.Long ||
                            Type == TokenType.String ||
-                           this == Token.True ||
-                           this == Token.False ||
+                           Type == TokenType.Boolean ||
                            this == Token.Null;
                 }
             }
@@ -591,8 +737,8 @@ namespace Fudge.Encodings
             public static readonly Token EndArray = new Token(TokenType.Special, JSONConstants.EndArray);
             public static readonly Token NameSeparator = new Token(TokenType.Special, JSONConstants.NameSeparator);
             public static readonly Token ValueSeparator = new Token(TokenType.Special, JSONConstants.ValueSeparator);
-            public static readonly Token True = new Token(TokenType.Special, JSONConstants.TrueLiteral);
-            public static readonly Token False = new Token(TokenType.Special, JSONConstants.FalseLiteral);
+            public static readonly Token True = new Token(TokenType.Boolean, JSONConstants.TrueLiteral);
+            public static readonly Token False = new Token(TokenType.Boolean, JSONConstants.FalseLiteral);
             public static readonly Token Null = new Token(TokenType.Special, JSONConstants.NullLiteral);
         }
 
@@ -601,7 +747,9 @@ namespace Fudge.Encodings
             Special,
             String,
             Integer,
+            Long,
             Double,
+            Boolean,
             Error
         }
     }

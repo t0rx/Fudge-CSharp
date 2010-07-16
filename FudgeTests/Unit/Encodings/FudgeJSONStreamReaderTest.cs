@@ -86,23 +86,41 @@ namespace Fudge.Tests.Unit.Encodings
         }
 
         [Fact]
-        public void Arrays()
+        public void Arrays_FRN88()
         {
-            string json = @"{""numbers"" : [ 1, 2, 4 ], ""submsgs"" : [ { ""a"" : -3 }, { ""b"" : 28 } ] }";
+            string json = @"{""mixed"" : [ 1, 2, ""fred"", 2.3 ], ""numbers"" : [ 1, 2, 4 ], ""submsgs"" : [ { ""a"" : -3 }, { ""b"" : 28 } ], ""empty"" : [ ], ""bools"" : [ true, false ] }";
 
             var msg = new FudgeJSONStreamReader(context, json).ReadMsg();
 
-            var numbers = msg.GetAllByName("numbers");
-            Assert.Equal(3, numbers.Count);                 // REVIEW 2009-12-18 t0rx -- Should JSON arrays collapse to primitive arrays where possible?
-            Assert.Equal(1, (sbyte)numbers[0].Value);
-            Assert.Equal(2, (sbyte)numbers[1].Value);
-            Assert.Equal(4, (sbyte)numbers[2].Value);
+            var mixed = msg.GetAllByName("mixed");
+            Assert.Equal(4, mixed.Count);
+            Assert.Equal(1, (sbyte)mixed[0].Value);
+            Assert.Equal(2, (sbyte)mixed[1].Value);
+            Assert.Equal("fred", (string)mixed[2].Value);
+            Assert.Equal(2.3, (double)mixed[3].Value);
 
+            // Numbers should collapse to a primitive array
+            var numbers = msg.GetAllByName("numbers");
+            Assert.Equal(1, numbers.Count);
+            var arr = (int[])numbers[0].Value;
+            Assert.Equal(1, arr[0]);
+            Assert.Equal(2, arr[1]);
+            Assert.Equal(4, arr[2]);
+            
             var messages = msg.GetAllByName("submsgs");
             Assert.Equal(2, messages.Count);
             Assert.IsType<FudgeMsg>(messages[1].Value);
             var message2 = (FudgeMsg)messages[1].Value;
             Assert.Equal(28, (sbyte)message2.GetInt("b"));
+
+            var empty = msg.GetAllByName("empty");
+            Assert.Equal(0, empty.Count);
+
+            // There is no bool[] Fudge field type, so it must be a repeating field
+            var bools = msg.GetAllByName("bools");
+            Assert.Equal(2, bools.Count);
+            Assert.True((bool)bools[0].Value);
+            Assert.False((bool)bools[1].Value);
         }
 
         [Fact]
